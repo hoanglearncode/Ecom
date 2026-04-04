@@ -62,25 +62,8 @@ const NAV = [
       { href: '/admin/promotions', label: 'Promotions', icon: Tag, badge: null },
       { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone, badge: null },
       { href: '/admin/coupons', label: 'Coupons', icon: Ticket, badge: null },
-      { href: '/admin/banners', label: 'Banners', icon: Image, badge: null },
     ],
-  },
-  {
-    group: 'Logistics',
-    items: [
-      { href: '/admin/shipping', label: 'Shipping', icon: Truck, badge: null },
-      { href: '/admin/returns', label: 'Returns', icon: RotateCcw, badge: '4', badgeColor: 'red' },
-    ],
-  },
-  {
-    group: 'System',
-    items: [
-      { href: '/admin/settings', label: 'Settings', icon: Settings, badge: null },
-      { href: '/admin/appearance', label: 'Appearance', icon: Palette, badge: null },
-      { href: '/admin/integrations', label: 'Integrations', icon: Webhook, badge: null },
-      { href: '/admin/database', label: 'Database', icon: Database, badge: null },
-    ],
-  },
+  }
 ]
 
 const ALERTS = [

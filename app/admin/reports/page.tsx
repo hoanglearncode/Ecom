@@ -823,7 +823,7 @@ function DetailPanel({ report, onClose }: DetailPanelProps) {
 ═══════════════════════════════════════════════════════ */
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>(REPORTS)
-  const [view, setView] = useState<ViewMode>('list')
+  const [view, setView] = useState<ViewMode>('grid')
   const [search, setSearch] = useState<string>('')
   const [activeCategory, setActiveCategory] = useState<CategoryName>('All')
   const [statusFilter, setStatusFilter] = useState<ReportStatus | 'All'>('All')
@@ -1028,20 +1028,6 @@ export default function ReportsPage() {
               </button>
 
               <div className="flex-1" />
-
-              {/* View toggle */}
-              <div className="flex border border-[#eee] rounded-xl overflow-hidden bg-white shadow-sm">
-                {([['list', List], ['grid', Layers]] as [ViewMode, LucideIcon][]).map(([v, Icon]) => (
-                  <button
-                    key={v}
-                    onClick={() => setView(v)}
-                    className="p-2.5 transition-colors"
-                    style={{ background: view === v ? '#1a1a1a' : 'transparent', color: view === v ? 'white' : '#999' }}
-                  >
-                    <Icon size={14} />
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Count */}
