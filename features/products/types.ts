@@ -1,0 +1,26 @@
+export type Product = {
+  id: string;
+  name: string;
+  sku?: string;
+  price: number;
+  currency?: string;
+  thumbnail?: string;
+  description?: string;
+  brand?: string;
+  categoryId?: string;
+  categorySlug?: string;
+  categoryName?: string;
+  compareAtPrice?: number;
+  cost?: number;
+  rating?: number;
+  reviewCount?: number;
+  stock?: number;
+  status?: "active" | "draft" | "archived";
+  tags?: string[];
+  color?: string;
+  material?: string;
+  warranty?: string;
+  releaseDate?: string;
+  weight?: string;
+  dimensions?: string;
+};
