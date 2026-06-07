@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Mail, MapPin, Phone, Zap } from 'lucide-react'
+import { NewsletterSection } from './shared/NewsletterSection';
 
 const COLS = [
   {
@@ -27,34 +28,8 @@ const PAYMENTS = ['Visa', 'Mastercard', 'Amex', 'PayPal', 'ApplePay']
 
 export default function Footer() {
   return (
-    <footer className="border-t border-border bg-background">
-
-      {/* Newsletter strip */}
-      <div className="bg-primary">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-12">
-            <div className="sm:flex-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-1">Newsletter</p>
-              <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                Get 20% off your first order.
-              </h3>
-            </div>
-            <div className="sm:w-96">
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 min-w-0 bg-white/15 border border-white/20 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-white/50 focus:outline-none focus:bg-white/20 transition-all"
-                />
-                <button className="shrink-0 bg-white text-primary font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-white/90 active:scale-[0.97] transition-all">
-                  Subscribe
-                </button>
-              </div>
-              <p className="text-white/40 text-[11px] mt-2">No spam. Unsubscribe at any time.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <footer className="border-t border-border bg-background mt-12">
+      <NewsletterSection />
 
       {/* Main Footer */}
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-12 sm:py-16">

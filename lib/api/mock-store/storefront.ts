@@ -1,5 +1,8 @@
 import { Headphones, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 
+import { mockCatalogCategories } from "./catalog";
+import { mockProducts } from "./products";
+import type { ProductCardProps } from "@/components/product-card";
 import type {
   HomePageData,
   NewPageData,
@@ -8,166 +11,120 @@ import type {
   WishlistPageData,
 } from "@/features/storefront/types";
 
+function formatCurrency(value: number) {
+  return `$${value.toFixed(2)}`;
+}
+
+function productDescription(
+  productName: string,
+  brand?: string,
+  categoryName?: string,
+) {
+  const parts = [brand, categoryName].filter(Boolean).join(" · ");
+  return parts
+    ? `${productName} from ${parts}, tuned for the current catalog and ready for storefront use.`
+    : `${productName} ready for storefront use.`;
+}
+
+function mapProductToCard(
+  product: (typeof mockProducts)[number],
+  badge?: string,
+): ProductCardProps {
+  return {
+    id: product.id,
+    title: product.name,
+    brand: product.brand ?? product.categoryName ?? "ShopHub",
+    image: product.thumbnail ?? mockCatalogCategories[0].image,
+    price: product.price,
+    originalPrice: product.compareAtPrice,
+    rating: product.rating ?? 4.5,
+    reviews: product.reviewCount ?? 0,
+    badge,
+  };
+}
+
+const activeProducts = mockProducts.filter(
+  (product) => product.status !== "archived",
+);
+
+const byRating = [...activeProducts].sort((left, right) => {
+  const ratingDelta = (right.rating ?? 0) - (left.rating ?? 0);
+  if (ratingDelta !== 0) return ratingDelta;
+
+  return (right.reviewCount ?? 0) - (left.reviewCount ?? 0);
+});
+
+const byReleaseDate = [...activeProducts].sort((left, right) => {
+  const rightTime = right.releaseDate
+    ? new Date(right.releaseDate).getTime()
+    : 0;
+  const leftTime = left.releaseDate ? new Date(left.releaseDate).getTime() : 0;
+  return rightTime - leftTime;
+});
+
+const saleProducts = [...activeProducts]
+  .filter((product) => product.compareAtPrice)
+  .sort((left, right) => {
+    const leftDiscount = left.compareAtPrice
+      ? ((left.compareAtPrice - left.price) / left.compareAtPrice) * 100
+      : 0;
+    const rightDiscount = right.compareAtPrice
+      ? ((right.compareAtPrice - right.price) / right.compareAtPrice) * 100
+      : 0;
+    return rightDiscount - leftDiscount;
+  });
+
+const heroProducts = byRating.slice(0, 3).map((product, index) => ({
+  id: `hero-${product.id}`,
+  label:
+    index === 0
+      ? "Editor's Pick"
+      : index === 1
+        ? "New Arrival"
+        : "Limited Edition",
+  title: product.name,
+  sub: productDescription(product.name, product.brand, product.categoryName),
+  price: formatCurrency(product.price),
+  image: product.thumbnail ?? mockCatalogCategories[0].image,
+  badge:
+    index === 0
+      ? "Bestseller"
+      : product.compareAtPrice
+        ? "Sale"
+        : product.status === "draft"
+          ? "Preview"
+          : "New",
+  href: `/products/${product.id}`,
+}));
+
+const featuredProducts = byRating
+  .filter((product) => product.compareAtPrice)
+  .slice(0, 4)
+  .map((product) =>
+    mapProductToCard(
+      product,
+      product.rating && product.rating >= 4.8 ? "Hot" : "Sale",
+    ),
+  );
+
+const newArrivalProducts = byReleaseDate
+  .slice(0, 4)
+  .map((product) => mapProductToCard(product, "New"));
+
+const homeCategories = mockCatalogCategories
+  .slice(0, 4)
+  .map((category, index) => ({
+    name: category.name,
+    icon: ["⚡", "◎", "⌂", "✦"][index] ?? "◌",
+    count: String(category.products.length),
+    image: category.image,
+  }));
+
 export const mockHomePageData: HomePageData = {
-  heroProducts: [
-    {
-      id: "h1",
-      label: "Editor's Pick",
-      title: "Premium Wireless Headphones",
-      sub: "Studio-quality sound, all-day comfort. The ultimate listening experience.",
-      price: "$229",
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop",
-      badge: "Bestseller",
-      href: "/products/1",
-    },
-    {
-      id: "h2",
-      label: "New Arrival",
-      title: "Smart Watch Pro Series X",
-      sub: "Track everything. Do more. Sleep better. Your health, redefined.",
-      price: "$349",
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop",
-      badge: "New",
-      href: "/products/2",
-    },
-    {
-      id: "h3",
-      label: "Limited Edition",
-      title: "Mechanical Gaming Keyboard",
-      sub: "Tactile precision, RGB mastery. Built for winners.",
-      price: "$179",
-      image:
-        "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=600&h=600&fit=crop",
-      badge: "Limited",
-      href: "/products/3",
-    },
-  ],
-  categories: [
-    {
-      name: "Electronics",
-      icon: "⚡",
-      count: "1,234",
-      image:
-        "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=300&fit=crop",
-    },
-    {
-      name: "Fashion",
-      icon: "✦",
-      count: "2,456",
-      image:
-        "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
-    },
-    {
-      name: "Home & Living",
-      icon: "⌂",
-      count: "876",
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&h=300&fit=crop",
-    },
-    {
-      name: "Sports",
-      icon: "◎",
-      count: "543",
-      image:
-        "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop",
-    },
-  ],
-  featured: [
-    {
-      id: "1",
-      title: "Premium Wireless Headphones",
-      brand: "SoundMax",
-      image:
-        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
-      price: 229.99,
-      originalPrice: 299.99,
-      rating: 4.8,
-      reviews: 324,
-      badge: "Hot",
-    },
-    {
-      id: "2",
-      title: "Smart Watch Pro Series",
-      brand: "TechBand",
-      image:
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
-      price: 349.99,
-      originalPrice: 449.99,
-      rating: 4.6,
-      reviews: 218,
-      badge: "New",
-    },
-    {
-      id: "3",
-      title: "4K Ultra Webcam",
-      brand: "VisionPro",
-      image:
-        "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&h=400&fit=crop",
-      price: 199.99,
-      rating: 4.7,
-      reviews: 156,
-    },
-    {
-      id: "4",
-      title: "Gaming Mouse Extreme Edition",
-      brand: "ClickMaster",
-      image:
-        "https://images.unsplash.com/photo-1527814050087-3793815479db?w=400&h=400&fit=crop",
-      price: 89.99,
-      originalPrice: 120.0,
-      rating: 4.9,
-      reviews: 512,
-      badge: "Sale",
-    },
-  ],
-  newArrivals: [
-    {
-      id: "5",
-      title: "Mechanical Keyboard TKL",
-      brand: "KeyPro",
-      image:
-        "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400&h=400&fit=crop",
-      price: 179.99,
-      rating: 4.7,
-      reviews: 89,
-      badge: "New",
-    },
-    {
-      id: "6",
-      title: "Portable SSD 2TB",
-      brand: "StorageX",
-      image:
-        "https://images.unsplash.com/photo-1531492898419-3a9aa15ebbd0?w=400&h=400&fit=crop",
-      price: 149.99,
-      originalPrice: 199.99,
-      rating: 4.8,
-      reviews: 203,
-    },
-    {
-      id: "7",
-      title: "Noise-Cancelling Earbuds",
-      brand: "SoundMax",
-      image:
-        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
-      price: 129.99,
-      rating: 4.5,
-      reviews: 447,
-    },
-    {
-      id: "8",
-      title: "LED Ring Light Pro",
-      brand: "StudioKit",
-      image:
-        "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=400&fit=crop",
-      price: 59.99,
-      originalPrice: 79.99,
-      rating: 4.6,
-      reviews: 312,
-      badge: "Sale",
-    },
-  ],
+  heroProducts,
+  categories: homeCategories,
+  featured: featuredProducts,
+  newArrivals: newArrivalProducts,
   usp: [
     {
       icon: Truck,
@@ -192,64 +149,94 @@ export const mockHomePageData: HomePageData = {
   ],
 };
 
+const wishlistProducts = [
+  byRating[0],
+  saleProducts[0] ?? byReleaseDate[0],
+  byReleaseDate[1] ?? byRating[1],
+].filter(Boolean) as (typeof mockProducts)[number][];
+
 export const mockWishlistPageData: WishlistPageData = {
   metrics: [
-    { label: "Saved items", value: "3" },
-    { label: "Price drops", value: "1" },
-    { label: "Ready to buy", value: "2" },
+    { label: "Saved items", value: String(wishlistProducts.length) },
+    { label: "Price drops", value: String(saleProducts.length) },
+    { label: "Ready to buy", value: String(featuredProducts.length) },
   ],
-  items: [
-    { name: "Premium Wireless Headphones", price: "$229", status: "Saved" },
-    { name: "Smart Watch Pro Series X", price: "$349", status: "Price drop" },
-    {
-      name: "Gaming Mouse Extreme Edition",
-      price: "$89",
-      status: "Back in stock",
-    },
-  ],
+  items: wishlistProducts.map((product, index) => ({
+    name: product.name,
+    price: formatCurrency(product.price),
+    status:
+      index === 0
+        ? "Saved"
+        : product.compareAtPrice
+          ? "Price drop"
+          : "Back in stock",
+  })),
 };
+
+const saleOffers = saleProducts.slice(0, 3).map((product, index) => {
+  const discount = product.compareAtPrice
+    ? Math.round(
+        ((product.compareAtPrice - product.price) / product.compareAtPrice) *
+          100,
+      )
+    : 0;
+
+  return {
+    title: `Save up to ${discount}% on ${product.name}`,
+    note: `${product.brand ?? product.categoryName} in ${product.categoryName?.toLowerCase() ?? "the catalog"}`,
+    tag: index === 0 ? "Live now" : index === 1 ? "Ends tonight" : "Featured",
+  };
+});
 
 export const mockSalePageData: SalePageData = {
   metrics: [
-    { label: "Active campaigns", value: "8" },
-    { label: "Ends today", value: "2" },
-    { label: "Avg discount", value: "34%" },
-  ],
-  offers: [
-    { title: "Up to 60% off", note: "Selected electronics", tag: "Live now" },
-    { title: "Bundle & save", note: "Accessory sets", tag: "Ends tonight" },
+    { label: "Active campaigns", value: String(saleOffers.length + 5) },
     {
-      title: "Free shipping weekend",
-      note: "All orders over $50",
-      tag: "Starts Friday",
+      label: "Ends today",
+      value: String(
+        Math.max(
+          1,
+          saleProducts.filter((product) => product.status === "active").length %
+            4,
+        ),
+      ),
+    },
+    {
+      label: "Avg discount",
+      value:
+        saleProducts.length > 0
+          ? `${Math.round(
+              saleProducts.reduce((sum, product) => {
+                if (!product.compareAtPrice) return sum;
+                return (
+                  sum +
+                  ((product.compareAtPrice - product.price) /
+                    product.compareAtPrice) *
+                    100
+                );
+              }, 0) / saleProducts.length,
+            )}%`
+          : "0%",
     },
   ],
+  offers: saleOffers,
   actions: ["Browse sale", "View bundles"],
 };
 
 export const mockNewPageData: NewPageData = {
   metrics: [
-    { label: "Fresh items", value: "18" },
-    { label: "Trending", value: "6" },
-    { label: "Launches this week", value: "3" },
-  ],
-  arrivals: [
+    { label: "Fresh items", value: String(byReleaseDate.length) },
+    { label: "Trending", value: String(byRating.slice(0, 6).length) },
     {
-      title: "Mechanical Keyboard TKL",
-      note: "Creator desk setup",
-      badge: "New",
-    },
-    {
-      title: "Portable SSD 2TB",
-      note: "Fast storage for creators",
-      badge: "Fresh",
-    },
-    {
-      title: "LED Ring Light Pro",
-      note: "Content capture gear",
-      badge: "Trending",
+      label: "Launches this week",
+      value: String(byReleaseDate.slice(0, 3).length),
     },
   ],
+  arrivals: byReleaseDate.slice(0, 3).map((product) => ({
+    title: product.name,
+    note: `${product.brand ?? product.categoryName} release`,
+    badge: product.compareAtPrice ? "Trending" : "New",
+  })),
 };
 
 export const mockProfilePageData: ProfilePageData = {

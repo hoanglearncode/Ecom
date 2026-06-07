@@ -8,18 +8,18 @@
   --primary: #E40F2A;
   --primary-light: #DA596C;
   --primary-lighter: #EEA9B3;
-  
+
   /* Backgrounds */
   --background: #FDFDFD;
   --background-secondary: #F5F4F4;
   --foreground: #1a1a1a;
-  
+
   /* Cards & UI Elements */
   --card: #FDFDFD;
   --card-foreground: #1a1a1a;
   --popover: #FDFDFD;
   --popover-foreground: #1a1a1a;
-  
+
   /* Semantic Colors */
   --secondary: #F5F4F4;
   --secondary-foreground: #1a1a1a;
@@ -29,19 +29,19 @@
   --accent-foreground: #FDFDFD;
   --destructive: #E40F2A;
   --destructive-foreground: #FDFDFD;
-  
+
   /* Borders & Input */
   --border: #E8E7E7;
   --input: #F5F4F4;
   --ring: #DA596C;
-  
+
   /* Chart Colors */
   --chart-1: #E40F2A;
   --chart-2: #DA596C;
   --chart-3: #EEA9B3;
   --chart-4: #666666;
   --chart-5: #999999;
-  
+
   /* Sidebar */
   --sidebar: #FDFDFD;
   --sidebar-foreground: #1a1a1a;
@@ -51,7 +51,7 @@
   --sidebar-accent-foreground: #E40F2A;
   --sidebar-border: #E8E7E7;
   --sidebar-ring: #DA596C;
-  
+
   --radius: 0.625rem;
 }
 

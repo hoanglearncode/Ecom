@@ -1,3 +1,7 @@
+import { Catalogue } from "@react-three/fiber";
+import { Category } from "../categories/types";
+import type { MockOrder } from "../orders/types";
+
 export type AdminMetric = {
   label: string;
   value: string;
@@ -24,9 +28,16 @@ export type AdminPromotion = {
 };
 
 export type AdminReport = {
+  id?: string;
   title: string;
   note: string;
   status: string;
+  category?: string;
+  lastRun?: string;
+  frequency?: string;
+  rowCount?: string;
+  owner?: string;
+  tags?: string[];
 };
 
 export type AdminTicket = {
@@ -57,7 +68,20 @@ export type AdminPromotionsData = {
 export type AdminReportsData = {
   metrics: AdminMetric[];
   reports: AdminReport[];
-  actions: string[];
+  actions?: string[];
+  scheduledExports?: Array<{
+    name: string;
+    destination: string;
+    schedule: string;
+    format: "CSV" | "XLSX" | "JSON" | "PDF";
+    lastSent: string;
+    status: "Active" | "Paused" | "Failed";
+  }>;
+  recentActivity?: Array<{
+    title: string;
+    time: string;
+    type: "export" | "view" | "schedule";
+  }>;
 };
 
 export type AdminSupportData = {
@@ -88,14 +112,13 @@ export type AdminCustomer = {
 export type AdminInventoryItem = {
   sku: string;
   stock: number;
+  productName: string;
+  brand: string;
+  categoryName: string;
   alert: string;
 };
 
-export type AdminOrder = {
-  number: string;
-  status: string;
-  total: string;
-};
+export type AdminOrder = MockOrder;
 
 export type AdminReview = {
   author: string;
@@ -138,7 +161,7 @@ export type AdminCouponsData = {
 
 export type AdminCategoriesData = {
   metrics: AdminMetric[];
-  categories: AdminCategory[];
+  categories: Category[];
 };
 
 export type AdminBrandsData = {

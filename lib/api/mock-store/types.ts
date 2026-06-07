@@ -57,12 +57,31 @@ export type MockCart = {
   total: number;
 };
 
-export type MockOrder = {
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "completed"
+  | "cancelled";
+
+export interface MockOrder {
   id: string;
   number: string;
-  status: "pending" | "paid" | "shipped" | "completed" | "cancelled";
+  status: OrderStatus;
   total: number;
-};
+  items: string;
+  date: string;
+  customer: string;
+  customerId?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  shippingAddress?: string;
+  paymentMethod?: string;
+  trackingNumber?: string;
+  notes?: string;
+  createdAt?: string;
+}
 
 export type MockCustomer = {
   id: string;

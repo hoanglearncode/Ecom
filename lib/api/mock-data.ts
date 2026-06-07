@@ -20,9 +20,8 @@ import {
 import { mockCart } from "./mock-store/cart";
 import { mockBrands } from "./mock-store/brands";
 import { mockCategories } from "./mock-store/categories";
-import { mockCustomers } from "./mock-store/customers";
+import { mockCustomers, mockOrders } from "./mock-store/orders-enhanced";
 import { mockInventory } from "./mock-store/inventory";
-import { mockOrders } from "./mock-store/orders";
 import {
   mockHomePageData,
   mockNewPageData,
@@ -31,10 +30,20 @@ import {
   mockWishlistPageData,
 } from "./mock-store/storefront";
 import { mockProductBySlug, mockProducts } from "./mock-store/products";
+import {
+  getOrderStats,
+  getDashboardStats,
+  getRevenueData,
+  getCategorySales,
+} from "./mock-store/enhanced";
 import type {
   MockCart,
   MockCheckoutPayload,
   MockDatabase,
+  MockProduct,
+  MockCategory,
+  MockOrder,
+  MockCustomer,
 } from "./mock-store/types";
 
 const mockDatabase: MockDatabase = {
@@ -153,8 +162,41 @@ export async function mockApiResponse<T>(
   }
 
   if (method === "GET" && path === "/api/admin/analytics") {
+    // Use enhanced data for realistic analytics
+    const stats = getOrderStats();
+    const dashboardStats = getDashboardStats();
+    const revenueData = getRevenueData(30);
+    const categorySales = getCategorySales();
+
+    const analyticsResponse = {
+      metrics: [
+        {
+          label: "Total Revenue",
+          value: `₫${(stats.totalRevenue / 1000000).toFixed(1)}M`,
+          change: "+12.5%",
+        },
+        { label: "Total Orders", value: String(stats.total), change: "+8.2%" },
+        {
+          label: "Total Customers",
+          value: String(dashboardStats.customers.total),
+          change: "+5.1%",
+        },
+        {
+          label: "Products Sold",
+          value: String(dashboardStats.products.total),
+          change: "+2.3%",
+        },
+      ],
+      channels: categorySales.slice(0, 5).map((cat, i) => ({
+        name: cat.name,
+        value: String(Math.floor(cat.value / 1000000)),
+        share: String(Math.round((cat.value / stats.totalRevenue) * 100)) + "%",
+      })),
+      actions: mockAdminAnalytics.actions,
+      revenueData,
+    };
     return makeResponse(
-      clone(mockAdminAnalytics) as T,
+      clone(analyticsResponse) as T,
       "Mock admin analytics loaded",
     );
   }
@@ -280,7 +322,9 @@ export async function mockApiResponse<T>(
   if (method === "GET" && path.startsWith("/api/products/")) {
     const id = getIdFromPath(path, "/api/products/");
     const product =
-      mockDatabase.products.find((item) => item.id === id || item.id === `p${id}`) ??
+      mockDatabase.products.find(
+        (item) => item.id === id || item.id === `p${id}`,
+      ) ??
       mockProductBySlug.get(id) ??
       null;
     return makeResponse(
@@ -345,11 +389,32 @@ export async function mockApiResponse<T>(
     const payload = body as MockCheckoutPayload | undefined;
     const checkoutId = `chk_${Date.now()}`;
     const orderNumber = `SH-${String(mockDatabase.orders.length + 84292).padStart(5, "0")}`;
+    const cartItems = mockDatabase.cart.items ?? [];
+    const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const itemNames = cartItems
+      .map((item) => {
+        const product = mockDatabase.products.find(
+          (p) => p.id === item.productId,
+        );
+        return product?.name ?? item.productId;
+      })
+      .filter(Boolean);
+    const itemsLabel =
+      itemCount === 0
+        ? "No items"
+        : `${itemCount} item${itemCount === 1 ? "" : "s"} — ${itemNames
+            .slice(0, 2)
+            .join(", ")}${
+            itemNames.length > 2 ? `, +${itemNames.length - 2} more` : ""
+          }`;
     const order = {
       id: checkoutId,
       number: orderNumber,
       status: "pending" as const,
       total: mockDatabase.cart.total,
+      items: itemsLabel,
+      date: new Date().toISOString(),
+      customer: "Guest",
     };
 
     mockDatabase.orders = [order, ...mockDatabase.orders];
@@ -362,6 +427,246 @@ export async function mockApiResponse<T>(
       } as T,
       "Mock checkout created",
     );
+  }
+
+  // ─── Products CRUD ─────────────────────────────────────────────────────────────
+
+  // Create Product
+  if (method === "POST" && path === "/api/products") {
+    const newProduct = body as MockProduct;
+    const { id: _ignoredId, ...productPayload } = newProduct;
+    const product = {
+      id: `p${Date.now()}`,
+      ...productPayload,
+      status: productPayload?.status ?? "active",
+      releaseDate: new Date().toISOString(),
+    };
+    mockDatabase.products.push(product);
+    return makeResponse(clone(product) as T, "Product created successfully");
+  }
+
+  // Update Product
+  if (method === "PUT" && path.startsWith("/api/products/")) {
+    const id = getIdFromPath(path, "/api/products/");
+    const index = mockDatabase.products.findIndex(
+      (p) => p.id === id || p.id === `p${id}`,
+    );
+    if (index === -1) {
+      throw new Error(`Product ${id} not found`);
+    }
+    const updates = body as Partial<MockProduct>;
+    mockDatabase.products[index] = {
+      ...mockDatabase.products[index],
+      ...updates,
+      id: mockDatabase.products[index].id, // Preserve ID
+    };
+    return makeResponse(
+      clone(mockDatabase.products[index]) as T,
+      "Product updated successfully",
+    );
+  }
+
+  // Patch Product (partial update)
+  if (method === "PATCH" && path.startsWith("/api/products/")) {
+    const id = getIdFromPath(path, "/api/products/");
+    const index = mockDatabase.products.findIndex(
+      (p) => p.id === id || p.id === `p${id}`,
+    );
+    if (index === -1) {
+      throw new Error(`Product ${id} not found`);
+    }
+    const updates = body as Partial<MockProduct>;
+    mockDatabase.products[index] = {
+      ...mockDatabase.products[index],
+      ...updates,
+    };
+    return makeResponse(
+      clone(mockDatabase.products[index]) as T,
+      "Product patched successfully",
+    );
+  }
+
+  // Delete Product
+  if (method === "DELETE" && path.startsWith("/api/products/")) {
+    const id = getIdFromPath(path, "/api/products/");
+    const index = mockDatabase.products.findIndex(
+      (p) => p.id === id || p.id === `p${id}`,
+    );
+    if (index === -1) {
+      throw new Error(`Product ${id} not found`);
+    }
+    const deleted = mockDatabase.products.splice(index, 1)[0];
+    return makeResponse(clone(deleted) as T, "Product deleted successfully");
+  }
+
+  // Bulk Delete Products
+  if (method === "DELETE" && path === "/api/products") {
+    const { ids } = body as { ids: string[] };
+    const initialLength = mockDatabase.products.length;
+    mockDatabase.products = mockDatabase.products.filter(
+      (p) => !ids.includes(p.id) && !ids.includes(p.id.replace("p", "")),
+    );
+    const deletedCount = initialLength - mockDatabase.products.length;
+    return makeResponse(
+      { deletedCount } as T,
+      `${deletedCount} product(s) deleted successfully`,
+    );
+  }
+
+  // ─── Categories CRUD ───────────────────────────────────────────────────────────
+
+  // Create Category
+  if (method === "POST" && path === "/api/categories") {
+    const newCategory = body as Omit<MockCategory, "id">;
+    const category: MockCategory = {
+      id: `cat${Date.now()}`,
+      ...newCategory,
+      productCount: 0,
+    };
+    mockDatabase.categories.push(category);
+    return makeResponse(clone(category) as T, "Category created successfully");
+  }
+
+  // Update Category
+  if (method === "PUT" && path.startsWith("/api/categories/")) {
+    const id = getIdFromPath(path, "/api/categories/");
+    const index = mockDatabase.categories.findIndex((c) => c.id === id);
+    if (index === -1) {
+      throw new Error(`Category ${id} not found`);
+    }
+    const updates = body as Partial<MockCategory>;
+    mockDatabase.categories[index] = {
+      ...mockDatabase.categories[index],
+      ...updates,
+      id: mockDatabase.categories[index].id,
+    };
+    return makeResponse(
+      clone(mockDatabase.categories[index]) as T,
+      "Category updated successfully",
+    );
+  }
+
+  // Delete Category
+  if (method === "DELETE" && path.startsWith("/api/categories/")) {
+    const id = getIdFromPath(path, "/api/categories/");
+    const index = mockDatabase.categories.findIndex((c) => c.id === id);
+    if (index === -1) {
+      throw new Error(`Category ${id} not found`);
+    }
+    const deleted = mockDatabase.categories.splice(index, 1)[0];
+    return makeResponse(clone(deleted) as T, "Category deleted successfully");
+  }
+
+  // ─── Orders CRUD ───────────────────────────────────────────────────────────────
+
+  // Update Order Status
+  if (method === "PATCH" && path.match(/\/api\/orders\/[^/]+\/status/)) {
+    const orderId = path.split("/")[3];
+    const { status } = body as { status: MockOrder["status"] };
+    const index = mockDatabase.orders.findIndex(
+      (o) => o.id === orderId || o.number === orderId,
+    );
+    if (index === -1) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    mockDatabase.orders[index].status = status;
+    return makeResponse(
+      clone(mockDatabase.orders[index]) as T,
+      "Order status updated successfully",
+    );
+  }
+
+  // Fulfill Order
+  if (method === "POST" && path.match(/\/api\/orders\/[^/]+\/fulfill/)) {
+    const orderId = path.split("/")[3];
+    const { trackingNumber } = body as { trackingNumber?: string };
+    const index = mockDatabase.orders.findIndex(
+      (o) => o.id === orderId || o.number === orderId,
+    );
+    if (index === -1) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    mockDatabase.orders[index].status = "shipped";
+    return makeResponse(
+      clone(mockDatabase.orders[index]) as T,
+      "Order fulfilled successfully",
+    );
+  }
+
+  // Refund Order
+  if (method === "POST" && path.match(/\/api\/orders\/[^/]+\/refund/)) {
+    const orderId = path.split("/")[3];
+    const index = mockDatabase.orders.findIndex(
+      (o) => o.id === orderId || o.number === orderId,
+    );
+    if (index === -1) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    mockDatabase.orders[index].status = "cancelled";
+    return makeResponse(
+      clone(mockDatabase.orders[index]) as T,
+      "Order refunded successfully",
+    );
+  }
+
+  // ─── Customers CRUD ────────────────────────────────────────────────────────────
+
+  // Update Customer
+  if (method === "PUT" && path.startsWith("/api/customers/")) {
+    const id = getIdFromPath(path, "/api/customers/");
+    const index = mockDatabase.customers.findIndex((c) => c.id === id);
+    if (index === -1) {
+      throw new Error(`Customer ${id} not found`);
+    }
+    const updates = body as Partial<MockCustomer>;
+    mockDatabase.customers[index] = {
+      ...mockDatabase.customers[index],
+      ...updates,
+      id: mockDatabase.customers[index].id,
+    };
+    return makeResponse(
+      clone(mockDatabase.customers[index]) as T,
+      "Customer updated successfully",
+    );
+  }
+
+  // ─── Inventory ──────────────────────────────────────────────────────────────────
+
+  // Update Stock
+  if (method === "PATCH" && path.match(/\/api\/inventory\/[^/]+\/stock/)) {
+    const productId = path.split("/")[3];
+    const { quantity, operation } = body as {
+      quantity: number;
+      operation: "set" | "add" | "subtract";
+    };
+    const index = mockDatabase.inventory.findIndex(
+      (i) => i.productId === productId,
+    );
+    if (index !== -1) {
+      if (operation === "set") {
+        mockDatabase.inventory[index].stock = quantity;
+      } else if (operation === "add") {
+        mockDatabase.inventory[index].stock += quantity;
+      } else if (operation === "subtract") {
+        mockDatabase.inventory[index].stock = Math.max(
+          0,
+          mockDatabase.inventory[index].stock - quantity,
+        );
+      }
+      // Also update product stock
+      const productIndex = mockDatabase.products.findIndex(
+        (p) => p.id === productId,
+      );
+      if (productIndex !== -1) {
+        mockDatabase.products[productIndex].stock =
+          mockDatabase.inventory[index].stock;
+      }
+      return makeResponse(
+        clone(mockDatabase.inventory[index]) as T,
+        "Stock updated successfully",
+      );
+    }
+    throw new Error(`Product ${productId} not found in inventory`);
   }
 
   throw new Error(`No mock handler registered for ${method} ${path}`);
