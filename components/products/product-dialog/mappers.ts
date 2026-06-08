@@ -36,7 +36,7 @@ const deriveStatus = (product?: Product): ProductStatus => {
 };
 
 export const mapProductToFormValues = (
-  product?: Product,
+  product?: any,
 ): ProductFormValues => {
   if (!product) return { ...DEFAULT_VALUES };
 
@@ -44,7 +44,7 @@ export const mapProductToFormValues = (
   const weight = extractNumbers(product.weight)[0] ?? 0;
   const images =
     product.images && product.images.length > 0
-      ? product.images.map((image, index) => ({
+      ? product.images.map((image : any, index: number) => ({
           id: image.id ?? `${product.id}-img-${index}`,
           url: image.url,
           isPrimary: image.isPrimary ?? index === 0,
@@ -111,7 +111,7 @@ export const mapFormValuesToProduct = (
     currency?: string;
     now?: string;
   },
-): Product => {
+): any => {
   const base = options?.base;
   const categoryLabel =
     options?.categoryOptions?.find(

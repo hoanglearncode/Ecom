@@ -61,7 +61,7 @@ export function ProductDialog({
   brands = DEFAULT_BRANDS,
   suppliers = DEFAULT_SUPPLIERS,
   onSubmit,
-}: ProductDialogProps) {
+}: any) {
   const [form, setForm] = useState<ProductFormValues>({
     ...DEFAULT_VALUES,
     ...product,
@@ -117,7 +117,7 @@ export function ProductDialog({
           <div className="flex flex-col flex-1 min-w-0 border-r">
             {/* Tab nav */}
             <nav className="flex items-center gap-0.5 px-4 py-2 border-b bg-muted/30 shrink-0 overflow-x-auto">
-              {SECTIONS.map(({ id, label, Icon }) => (
+              {SECTIONS.map(({ id, label, Icon } : { id: SectionId; label: string; Icon: any }) => (
                 <button
                   key={id}
                   type="button"

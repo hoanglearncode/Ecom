@@ -63,7 +63,7 @@ interface ProductFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (values: ProductFormValues) => Promise<void>;
-  initialData?: Partial<ProductFormValues>;
+  initialData?: Partial<any>;
   categories?: Array<{ id: string; name: string }>;
   brands?: Array<{ id: string; name: string }>;
   isLoading?: boolean;
@@ -80,7 +80,7 @@ export function ProductForm({
 }: ProductFormProps) {
   const { t, locale } = useTranslation();
   const [tagInput, setTagInput] = useState("");
-  const [images, setImages] = useState<string[]>(initialData?.images ?? []);
+  const [images, setImages] = useState<any[]>(initialData?.images ?? []);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ProductFormValues>({
@@ -113,7 +113,7 @@ export function ProductForm({
     setIsSubmitting(true);
     try {
       // Convert price strings to numbers (in cents)
-      const processedValues = {
+      const processedValues : any = {
         ...values,
         price: Math.round(parseCurrency(values.price, "VND") * 100),
         compareAtPrice: values.compareAtPrice

@@ -46,7 +46,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 import { getAdminReports } from "../api";
-import type { ReportCategory } from "@/lib/api/mock-store/mock-admin-reports";
+import type { ReportCategory, ScheduledExport } from "@/lib/api/mock-store/mock-admin-reports";
 import type { AdminReport } from "@/features/admin/types";
 
 // ─── Config maps ──────────────────────────────────────────────────────────────
@@ -193,6 +193,7 @@ function MetricCards({
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       {enriched.map((m) => {
         const cfg = ICONS[m.label] ?? ICONS.Exports;
+        const Icon : any = cfg.Icon;
         const isUp = m.change?.startsWith("+");
         const isDown = m.change?.startsWith("-");
         return (
@@ -203,7 +204,7 @@ function MetricCards({
                   {m.label}
                 </CardDescription>
                 <div className={cn("flex h-7 w-7 items-center justify-center rounded-lg", cfg.iconBg)}>
-                  <cfg.Icon className={cn("h-3.5 w-3.5", cfg.iconColor)} />
+                  <Icon className={cn("h-3.5 w-3.5", cfg.iconColor)} />
                 </div>
               </div>
               <CardTitle className="text-3xl">{m.value}</CardTitle>
@@ -225,14 +226,14 @@ function MetricCards({
 function ReportRow({ report }: { report: AdminReport }) {
   const cat = report.category ? CATEGORY_CONFIG[report.category as ReportCategory] : null;
   const st = STATUS_CONFIG[report.status] || STATUS_CONFIG.Ready;
-  const CatIcon = cat?.Icon || FileText;
-  const StIcon = st.Icon;
+  const CatIcon : any = cat?.Icon || FileText;
+  const StIcon : any = st.Icon;
 
   return (
     <div className="group flex cursor-pointer items-center gap-3 border-b px-5 py-3.5 transition-colors last:border-0 hover:bg-muted/50">
       {/* Category icon */}
-      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", cat.iconBg)}>
-        <CatIcon className={cn("h-4 w-4", cat.iconColor)} />
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", cat?.iconBg)}>
+        <CatIcon className={cn("h-4 w-4", cat?.iconColor)} />
       </div>
 
       {/* Title + meta */}
@@ -306,9 +307,9 @@ function ScheduledExportsTable({ exports }: { exports: ScheduledExport[] }) {
         </div>
 
         {exports.map((ex, idx) => {
-          const DestIcon = DESTINATION_ICON(ex.destination);
+          const DestIcon : any = DESTINATION_ICON(ex.destination);
           const stCfg = EXPORT_STATUS_CONFIG[ex.status];
-          const StIcon = stCfg.Icon;
+          const StIcon : any = stCfg.Icon;
 
           return (
             <div
@@ -366,7 +367,7 @@ function ActivityFeed({ activity }: { activity: Array<{ title: string; time: str
       </CardHeader>
       <CardContent className="p-0">
         {activity.map((item, idx) => {
-          const Icon = ACTIVITY_ICON[item.type] ?? Eye;
+          const Icon : any = ACTIVITY_ICON[item.type] ?? Eye;
           return (
             <div
               key={idx}
@@ -423,8 +424,8 @@ export default function AdminReportsFeaturePage() {
 
   const categoryCounts = useMemo(() => {
     const map: Partial<Record<ReportCategory | "All", number>> = { All: reports.length };
-    reports.forEach((r) => {
-      map[r.category] = (map[r.category] ?? 0) + 1;
+    reports.forEach((r : any) => {
+      map[r.category as ReportCategory | "All"] = (map[r.category as ReportCategory | "All"] ?? 0) + 1;
     });
     return map;
   }, [reports]);

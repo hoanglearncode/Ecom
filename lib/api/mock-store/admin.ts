@@ -51,14 +51,17 @@ const createCategoryTree = () => {
   const topLevelCategories = mockCategories.slice(0, 8); // Take first 8 as top-level
 
   return topLevelCategories.map((cat, index) => {
+    const statusValue: "active" | "draft" | "inactive" =
+      cat.productCount >= 10 ? "active" : "draft";
+
     const baseCategory = {
       id: cat.id,
       name: cat.name,
       slug: cat.slug,
       items: cat.productCount,
-      status: cat.productCount >= 10 ? "active" : "draft",
+      status: statusValue,
       featured: cat.featured,
-      parentId: null,
+      parentId: null as string | null,
       description: cat.description,
       productCount: cat.productCount,
       tone: cat.tone,
@@ -76,7 +79,7 @@ const createCategoryTree = () => {
             name: "Headphones",
             slug: "headphones",
             items: 28,
-            status: "active",
+            status: "active" as const,
             featured: true,
             parentId: cat.id,
             description: "Over-ear and in-ear audio.",
@@ -88,7 +91,7 @@ const createCategoryTree = () => {
             name: "Speakers",
             slug: "speakers",
             items: 20,
-            status: "inactive",
+            status: "inactive" as const,
             featured: false,
             parentId: cat.id,
             description: "Portable and home speakers.",
@@ -111,7 +114,7 @@ const createCategoryTree = () => {
             name: "Ultrabooks",
             slug: "ultrabooks",
             items: 32,
-            status: "active",
+            status: "active" as const,
             featured: true,
             parentId: cat.id,
             description: "Thin and light laptops.",
@@ -123,7 +126,7 @@ const createCategoryTree = () => {
             name: "Gaming Laptops",
             slug: "gaming-laptops",
             items: 18,
-            status: "active",
+            status: "active" as const,
             featured: false,
             parentId: cat.id,
             description: "High-performance gaming machines.",
@@ -146,7 +149,7 @@ const createCategoryTree = () => {
             name: "Flagship",
             slug: "flagship",
             items: 45,
-            status: "active",
+            status: "active" as const,
             featured: true,
             parentId: cat.id,
             description: "Premium flagship smartphones.",
@@ -158,7 +161,7 @@ const createCategoryTree = () => {
             name: "Mid-range",
             slug: "midrange",
             items: 35,
-            status: "active",
+            status: "active" as const,
             featured: false,
             parentId: cat.id,
             description: "Affordable midrange phones.",
@@ -180,7 +183,7 @@ const createCategoryTree = () => {
             name: "Keyboards",
             slug: "keyboards",
             items: 24,
-            status: "active",
+            status: "active" as const,
             featured: false,
             parentId: cat.id,
             description: "Mechanical and wireless keyboards.",
@@ -192,7 +195,7 @@ const createCategoryTree = () => {
                 name: "Mechanical",
                 slug: "mechanical-keyboards",
                 items: 15,
-                status: "active",
+                status: "active" as const,
                 featured: true,
                 parentId: "cat-peripherals-keyboards",
                 description: "Mechanical switch keyboards.",
@@ -204,7 +207,7 @@ const createCategoryTree = () => {
                 name: "Wireless",
                 slug: "wireless-keyboards",
                 items: 9,
-                status: "inactive",
+                status: "inactive" as const,
                 featured: false,
                 parentId: "cat-peripherals-keyboards",
                 description: "Wireless and bluetooth keyboards.",
@@ -218,7 +221,7 @@ const createCategoryTree = () => {
             name: "Mice",
             slug: "mice",
             items: 18,
-            status: "active",
+            status: "active" as const,
             featured: false,
             parentId: cat.id,
             description: "Ergonomic and gaming mice.",
@@ -235,11 +238,17 @@ const createCategoryTree = () => {
 
 const adminCategories = createCategoryTree();
 
-const adminInventoryRows = mockInventory.map((item) => ({
-  sku: item.sku ?? item.productId,
-  stock: item.stock,
-  alert: item.alert ?? "Healthy",
-}));
+const adminInventoryRows = mockInventory.map((item) => {
+  const product = mockProducts.find((p) => p.id === item.productId);
+  return {
+    sku: item.sku ?? item.productId,
+    stock: item.stock,
+    alert: item.alert ?? "Healthy",
+    productName: product?.name ?? item.productId,
+    brand: product?.brand ?? "Unknown",
+    categoryName: product?.categoryName ?? "Unknown",
+  };
+});
 
 const orderStats = getOrderStats();
 const openOrderCount =

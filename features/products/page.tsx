@@ -646,7 +646,7 @@ export default function ProductListPage() {
                 <div className="flex border border-gray-200 rounded-lg overflow-hidden">
                   {([
                     ["grid4",LayoutGrid],["grid3",Grid2x2],["list",List],
-                  ] as [ViewMode,React.ElementType][]).map(([mode,Icon])=>(
+                  ] as [ViewMode, any][]).map(([mode,Icon])=>(
                     <button key={mode} onClick={()=>setViewMode(mode)}
                       className={cn("w-8 h-8 flex items-center justify-center transition-colors",
                         viewMode===mode?"bg-[#1a1a2e] text-white":"bg-white text-gray-400 hover:bg-gray-50")}>

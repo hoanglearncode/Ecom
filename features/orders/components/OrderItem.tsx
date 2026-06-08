@@ -1,7 +1,7 @@
 import React from "react";
-import { Order } from "../types";
+// import { Order } from "../types";
 
-export default function OrderItem({ order }: { order: Order }) {
+export default function OrderItem({ order }: { order: any }) {
   return (
     <div className="p-3 border rounded-md flex items-center justify-between">
       <div>

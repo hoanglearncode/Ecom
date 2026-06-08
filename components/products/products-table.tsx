@@ -287,7 +287,7 @@ export default function ProductsTable({
     setSelected(new Set());
   };
 
-  const handleSubmit = (data: ProductFormValues) => {
+  const handleSubmit = (data: any) => {
     const categoryLabel =
       categoryOptions.find((option) => option.value === data.categoryKey)
         ?.label ?? "Chưa phân loại";

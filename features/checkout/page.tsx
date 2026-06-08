@@ -147,7 +147,7 @@ function StepIndicator({ current }: { current: Step }) {
       {STEPS.map((s, i) => {
         const done    = i < idx;
         const active  = i === idx;
-        const Icon    = s.icon;
+        const Icon : any = s.icon;
         return (
           <div key={s.key} className="flex items-center">
             <div className="flex flex-col items-center gap-1">

@@ -86,7 +86,7 @@ export function LocaleCurrencySwitcher({
                   <button
                     key={curr}
                     onClick={() => {
-                      setCurrency(curr);
+                      setCurrency(curr as any);
                       setOpen(false);
                     }}
                     className={cn(
@@ -202,7 +202,7 @@ export function LocaleCurrencySwitcher({
               (curr) => (
                 <button
                   key={curr}
-                  onClick={() => setCurrency(curr)}
+                  onClick={() => setCurrency(curr as any)}
                   className={cn(
                     "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm w-full hover:bg-muted transition-colors",
                     currency === curr && "bg-muted",

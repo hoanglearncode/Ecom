@@ -7,7 +7,7 @@ const translations = {
   en: enTranslations,
 } as const;
 
-type Translations = typeof translations[vi];
+type Translations = typeof translations["vi"];
 type TranslationPath = string;
 
 // Get nested value from object by path (e.g., "common.save")

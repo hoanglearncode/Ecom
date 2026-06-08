@@ -6,7 +6,7 @@
  */
 
 // Re-export enhanced data
-export { mockCustomers, mockOrders, getOrdersByStatus, getOrdersByCustomer, getRecentOrders, getOrderStats } from "./orders-enhanced";
+export { mockCustomers, mockOrders, getOrdersByStatus, getRecentOrders, getOrderStats } from "./orders-enhanced";
 export { mockProducts, mockProductBySlug } from "./products";
 export { mockCategories } from "./categories";
 export { mockInventory } from "./inventory";

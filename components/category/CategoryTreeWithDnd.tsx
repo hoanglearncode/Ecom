@@ -12,7 +12,6 @@ import {
   DragOverlay,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -45,10 +44,6 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/category/StatusBadge";
 import { Category } from "@/features/categories/types";
 
-interface SortableCategory extends Category {
-  parentId: string | null;
-  items: Category[];
-}
 
 interface CategoryTreeWithDndProps {
   categories: Category[];
@@ -58,26 +53,30 @@ interface CategoryTreeWithDndProps {
   onMove?: (categoryId: string, newParentId: string | null, newIndex: number) => void;
   onAddChild?: (parentId: string | null) => void;
   searchQuery?: string;
+  parentId?: string | null;
+  depth?: number;
 }
 
-function SortableCategoryItem({
+function CategoryItem({
   category,
   depth = 0,
   onEdit,
   onDelete,
   onToggleFeatured,
   onAddChild,
+  onMove,
   searchQuery = "",
   parentId = null,
   index = 0,
   isDragging = false,
 }: {
-  category: SortableCategory;
+  category: Category;
   depth?: number;
   onEdit?: (cat: Category) => void;
   onDelete?: (cat: Category) => void;
   onToggleFeatured?: (cat: Category) => void;
   onAddChild?: (parentId: string | null) => void;
+  onMove?: (categoryId: string, newParentId: string | null, newIndex: number) => void;
   searchQuery?: string;
   parentId?: string | null;
   index?: number;
@@ -252,7 +251,7 @@ function SortableCategoryItem({
 
       {/* Children */}
       {hasChildren && expanded && (
-        <SortableCategoryList
+        <CategoryTreeList
           categories={category.children!}
           parentId={category.id}
           depth={depth + 1}
@@ -260,6 +259,7 @@ function SortableCategoryItem({
           onDelete={onDelete}
           onToggleFeatured={onToggleFeatured}
           onAddChild={onAddChild}
+          onMove={onMove}
           searchQuery={searchQuery}
         />
       )}
@@ -267,7 +267,7 @@ function SortableCategoryItem({
   );
 }
 
-function SortableCategoryList({
+function CategoryTreeList({
   categories,
   parentId = null,
   depth = 0,
@@ -275,6 +275,7 @@ function SortableCategoryList({
   onDelete,
   onToggleFeatured,
   onAddChild,
+  onMove,
   searchQuery = "",
 }: {
   categories: Category[];
@@ -284,12 +285,13 @@ function SortableCategoryList({
   onDelete?: (cat: Category) => void;
   onToggleFeatured?: (cat: Category) => void;
   onAddChild?: (parentId: string | null) => void;
+  onMove?: (categoryId: string, newParentId: string | null, newIndex: number) => void;
   searchQuery?: string;
 }) {
   return categories.map((category, index) => (
-    <SortableCategoryItem
+    <CategoryItem
       key={category.id}
-      category={category as SortableCategory}
+      category={category}
       parentId={parentId}
       index={index}
       depth={depth}
@@ -297,6 +299,7 @@ function SortableCategoryList({
       onDelete={onDelete}
       onToggleFeatured={onToggleFeatured}
       onAddChild={onAddChild}
+      onMove={onMove}
       searchQuery={searchQuery}
     />
   ));
@@ -367,11 +370,12 @@ export function CategoryTreeWithDnd({
         items={categories.map((c) => c.id)}
         strategy={verticalListSortingStrategy}
       >
-        <SortableCategoryList
+        <CategoryTreeList
           categories={categories}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleFeatured={onToggleFeatured}
+          onMove={onMove}
           onAddChild={onAddChild}
           searchQuery={searchQuery}
         />

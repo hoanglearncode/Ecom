@@ -17,7 +17,7 @@ export function MetricCard({
 }: {
   label: string;
   value: string | number;
-  icon: React.ElementType;
+  icon: any;
   loading?: boolean;
   accent?: string;
 }) {

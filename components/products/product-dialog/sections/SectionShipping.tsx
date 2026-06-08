@@ -120,7 +120,7 @@ export function SectionShipping({ form, onChange }: Props) {
         <Label className="text-sm">Phương thức vận chuyển hỗ trợ</Label>
         <div className="grid grid-cols-2 gap-2">
           {SHIPPING_METHODS.map((method) => {
-            const Icon = SHIPPING_ICONS[method.id] ?? Truck;
+            const Icon : any = SHIPPING_ICONS[method.id] ?? Truck;
             return (
               <label
                 key={method.id}

@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import React from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ export function ProductPagination({
 // ─── Hook for managing pagination state ─────────────────────────────────────────
 
 export function useProductPagination(initialState?: Partial<PaginationState>) {
-  const [state, setState] = useState<PaginationState>({
+  const [state, setState] = React.useState<PaginationState>({
     page: 1,
     pageSize: 12,
     ...initialState,
