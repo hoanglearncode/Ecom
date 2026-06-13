@@ -13,7 +13,6 @@ const NAV = [
   { label: 'New In', href: '/new', sub: ['Just Arrived', 'This Week', 'Trending Now'] },
   { label: 'Products', href: '/products', sub: ['All Products', 'Best Sellers', 'Deals & Offers'] },
   { label: 'Categories', href: '/categories', sub: ['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books'] },
-  { label: 'Brands', href: '/brands' },
   { label: 'Sale', href: '/sale', highlight: true },
 ]
 

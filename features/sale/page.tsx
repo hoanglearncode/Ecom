@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getProducts } from "@/features/products/api";
+import type { Product as APIProduct } from "@/features/products/types";
 import {
   Search, Star, Heart, ShoppingCart, Zap, Clock, Flame,
   ChevronRight, Tag, Truck, Shield, RotateCcw, Gift,
@@ -11,6 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+
+function ProductImg({ src, alt, cls }: { src: string; alt: string; cls?: string }) {
+  if (src.startsWith("http") || src.startsWith("/")) {
+    return <img src={src} alt={alt} className={cn("object-cover w-full h-full", cls)} />;
+  }
+  return <span>{src}</span>;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +69,40 @@ interface Voucher {
   cls: string;
 }
 
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
+function adaptSaleProduct(p: APIProduct): SaleProduct {
+  const compareAt = p.compareAtPrice ?? p.price;
+  const slug = p.categorySlug ?? "";
+  let cat: SaleCategory = "all";
+  if (slug.includes("shoes") || slug.includes("footwear") || slug.includes("sneaker")) cat = "sneaker";
+  else if (slug.includes("fashion") || slug.includes("mens") || slug.includes("womens") || slug.includes("clothing")) cat = "fashion";
+  else if (slug.includes("beauty") || slug.includes("skincare") || slug.includes("makeup") || slug.includes("fragrance")) cat = "beauty";
+  else if (slug.includes("electronics") || slug.includes("smartphone") || slug.includes("laptop") || slug.includes("tablet") || slug.includes("gaming") || slug.includes("audio") || slug.includes("camera")) cat = "electronics";
+  else if (slug.includes("food") || slug.includes("grocery") || slug.includes("snack")) cat = "food";
+  else if (slug.includes("furniture") || slug.includes("home") || slug.includes("kitchen") || slug.includes("bedding")) cat = "furniture";
+  return {
+    id: p.id,
+    name: p.name,
+    image: p.thumbnail ?? "📦",
+    brand: p.brand ?? "—",
+    brandEmoji: "🏷️",
+    price: p.price,
+    originalPrice: compareAt,
+    category: cat,
+    rating: p.rating ?? 4.5,
+    reviewCount: p.reviewCount ?? 0,
+    soldCount: 0,
+    stock: p.stock ?? 0,
+    maxStock: (p.stock ?? 0) + 200,
+    isFlash: false,
+    isNew: false,
+    platform: "shopee",
+    tags: p.tags ?? [],
+    colors: p.color ? [p.color] : [],
+  };
+}
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const FLASH_SESSIONS: FlashSaleSession[] = [
@@ -74,7 +119,7 @@ const VOUCHERS: Voucher[] = [
   { code: "NEWUSER30", label: "Khách mới -30%",    desc: "Lần đầu mua",   type: "percent",  value: "30%",   minOrder: "200k", expiry: "Không hạn",   cls: "bg-violet-50 border-violet-200 text-violet-800" },
 ];
 
-const PRODUCTS: SaleProduct[] = [
+const STATIC_PRODUCTS: SaleProduct[] = [
   {
     id: "S001", name: "Biti's Hunter X Street 2026 – Hè", image: "👟",
     brand: "Biti's Hunter", brandEmoji: "👟", price: 449000, originalPrice: 749000,
@@ -276,10 +321,10 @@ function ProductCard({ product, wishlist, onWishlist }: {
   const plt   = PLATFORM_CFG[product.platform];
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden flex flex-col">
+    <Link href={`/products/${product.id}`} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden flex flex-col">
       {/* Image area */}
       <div className="relative bg-gray-50 h-40 flex items-center justify-center text-5xl shrink-0">
-        {product.image}
+        <ProductImg src={product.image} alt={product.name} />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -362,13 +407,19 @@ function ProductCard({ product, wishlist, onWishlist }: {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SalePage() {
+  const { data: rawProducts } = useQuery({ queryKey: ["products"], queryFn: getProducts });
+  const PRODUCTS = useMemo(
+    () => rawProducts ? rawProducts.map(adaptSaleProduct) : STATIC_PRODUCTS,
+    [rawProducts]
+  );
+
   const [category, setCategory] = useState<SaleCategory>("all");
   const [sortKey,  setSortKey]  = useState<SortKey>("discount");
   const [search,   setSearch]   = useState("");

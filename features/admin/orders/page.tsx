@@ -152,16 +152,18 @@ function enrichOrder(order: MockOrder): EnrichedOrder {
     });
   }
 
+  // Prefer structured lineItems; fall back to summary string as single row
+  const enrichedItems = order.lineItems?.map((li) => ({
+    productId: li.productId,
+    name: li.name,
+    quantity: li.quantity,
+    price: li.price,
+    thumbnail: li.thumbnail,
+  })) ?? [{ productId: order.id, name: order.items, quantity: 1, price: order.total }];
+
   return {
     ...order,
-    items: [
-      {
-        productId: order.id,
-        name: order.items, // raw items label as fallback
-        quantity: 1,
-        price: order.total,
-      },
-    ],
+    items: enrichedItems,
     customerInfo: {
       id: order.customerId ?? order.id,
       name: order.customer,

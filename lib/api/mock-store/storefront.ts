@@ -1,6 +1,6 @@
 import { Headphones, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 
-import { mockCatalogCategories } from "./catalog";
+import { dbCategories } from "../../db/categories";
 import { mockProducts } from "./products";
 import type { ProductCardProps } from "@/components/product-card";
 import type {
@@ -34,7 +34,7 @@ function mapProductToCard(
     id: product.id,
     title: product.name,
     brand: product.brand ?? product.categoryName ?? "ShopHub",
-    image: product.thumbnail ?? mockCatalogCategories[0].image,
+    image: product.thumbnail ?? "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=800&q=80",
     price: product.price,
     originalPrice: product.compareAtPrice,
     rating: product.rating ?? 4.5,
@@ -85,7 +85,7 @@ const heroProducts = byRating.slice(0, 3).map((product, index) => ({
   title: product.name,
   sub: productDescription(product.name, product.brand, product.categoryName),
   price: formatCurrency(product.price),
-  image: product.thumbnail ?? mockCatalogCategories[0].image,
+  image: product.thumbnail ?? "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=800&q=80",
   badge:
     index === 0
       ? "Bestseller"
@@ -111,13 +111,14 @@ const newArrivalProducts = byReleaseDate
   .slice(0, 4)
   .map((product) => mapProductToCard(product, "New"));
 
-const homeCategories = mockCatalogCategories
+const homeCategories = dbCategories
+  .filter((c) => c.level === 0)
   .slice(0, 4)
   .map((category, index) => ({
     name: category.name,
     icon: ["⚡", "◎", "⌂", "✦"][index] ?? "◌",
-    count: String(category.products.length),
-    image: category.image,
+    count: String(category.productCount),
+    image: category.image ?? "",
   }));
 
 export const mockHomePageData: HomePageData = {

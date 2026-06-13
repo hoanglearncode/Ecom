@@ -1,14 +1,4 @@
-import { mockCatalogCategories } from "./catalog";
-import type { MockCategory } from "./types";
+import { dbCategories } from "../../db/categories";
 
-export const mockCategories: MockCategory[] = mockCatalogCategories.map(
-  (category) => ({
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-    description: category.description,
-    productCount: category.products.length,
-    featured: category.featured,
-    tone: category.tone,
-  }),
-);
+// Backward-compatible alias used by existing mock handlers
+export const mockCategories = dbCategories;

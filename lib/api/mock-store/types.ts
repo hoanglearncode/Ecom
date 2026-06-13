@@ -1,12 +1,15 @@
 export type MockProduct = {
   id: string;
   name: string;
+  slug?: string;
   sku?: string;
   price: number;
   currency?: string;
   thumbnail?: string;
+  images?: string[];
   description?: string;
   brand?: string;
+  brandId?: string;
   categoryId?: string;
   categorySlug?: string;
   categoryName?: string;
@@ -23,6 +26,8 @@ export type MockProduct = {
   releaseDate?: string;
   weight?: string;
   dimensions?: string;
+  featured?: boolean;
+  specs?: Record<string, string | number>;
 };
 
 export type MockBrand = {
@@ -44,6 +49,10 @@ export type MockCategory = {
   productCount: number;
   featured: boolean;
   tone: string;
+  parentId?: string;
+  image?: string;
+  icon?: string;
+  level?: number; // 0 = root, 1 = leaf
 };
 
 export type MockCartItem = {
@@ -65,12 +74,23 @@ export type OrderStatus =
   | "completed"
   | "cancelled";
 
+export type MockOrderLineItem = {
+  productId: string;
+  name: string;
+  thumbnail?: string;
+  quantity: number;
+  price: number;
+};
+
 export interface MockOrder {
   id: string;
   number: string;
   status: OrderStatus;
   total: number;
+  /** Human-readable summary, e.g. "iPhone 16 Pro, AirPods +1 more" */
   items: string;
+  /** Structured line items for detail views */
+  lineItems?: MockOrderLineItem[];
   date: string;
   customer: string;
   customerId?: string;
@@ -88,6 +108,14 @@ export type MockCustomer = {
   name: string;
   email?: string;
   phone?: string;
+  avatar?: string;
+  address?: string;
+  city?: string;
+  status?: "active" | "inactive" | "blocked";
+  totalOrders?: number;
+  totalSpent?: number;
+  tier?: "bronze" | "silver" | "gold" | "platinum";
+  createdAt?: string;
 };
 
 export type MockInventoryItem = {

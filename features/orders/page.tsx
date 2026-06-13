@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
+import type { MockOrder } from "@/lib/api/mock-store/types";
 import {
   Package, Search, ChevronRight, ChevronDown, ChevronUp,
   Star, MessageSquare, RotateCcw, Truck, CheckCircle2,
@@ -63,9 +66,81 @@ interface Order {
   earnedPoints: number;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Adapter ─────────────────────────────────────────────────────────────────
 
-const ORDERS: Order[] = [
+const ORDER_STATUS_MAP: Record<string, OrderStatus> = {
+  pending: "processing",
+  paid: "confirmed",
+  processing: "processing",
+  shipped: "shipped",
+  completed: "delivered",
+  cancelled: "cancelled",
+};
+
+function fmtOrderDate(s: string): string {
+  try {
+    const d = new Date(s);
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", "");
+  } catch { return s; }
+}
+
+function buildOrderTracking(status: OrderStatus, date: string): TrackingEvent[] {
+  const base = fmtOrderDate(date);
+  const steps: [string, string, string][] = [
+    [base, "Đơn hàng được đặt", "Đơn hàng đã được xác nhận"],
+    ["—",  "Shop xác nhận",     "Shop đang chuẩn bị hàng"],
+    ["—",  "Lấy hàng",          "Đơn vị vận chuyển đã lấy hàng"],
+    ["—",  "Đang vận chuyển",   "Hàng đang trên đường đến bạn"],
+    ["—",  "Giao hàng thành công", "Hàng đã được giao đến bạn"],
+  ];
+  const doneIdx: Record<OrderStatus, number> = {
+    processing: 0, confirmed: 1, picking: 2, shipped: 3,
+    delivered: 4, cancelled: 0, refunding: 4, refunded: 4,
+  };
+  const done = doneIdx[status] ?? 0;
+  return steps.map((s, i) => ({
+    time: s[0], label: s[1], desc: s[2],
+    done: i <= done,
+    active: i === done,
+  }));
+}
+
+function adaptOrder(o: MockOrder): Order {
+  const status = ORDER_STATUS_MAP[o.status] ?? "processing";
+  const lineItems = o.lineItems ?? [];
+  const items: OrderItem[] = lineItems.length
+    ? lineItems.map(li => ({
+        id: li.productId, name: li.name,
+        image: li.thumbnail ?? "📦", brand: "—", variant: "—",
+        price: li.price, originalPrice: li.price,
+        qty: li.quantity, reviewed: false,
+      }))
+    : [{ id: o.id, name: o.items, image: "📦", brand: "—", variant: "—",
+         price: o.total, originalPrice: o.total, qty: 1, reviewed: false }];
+  return {
+    id: o.number ?? o.id,
+    status,
+    platform: "shopee",
+    placedAt: fmtOrderDate(o.date),
+    deliveredAt: status === "delivered" ? fmtOrderDate(o.date) : undefined,
+    address: o.shippingAddress ?? "—",
+    total: o.total,
+    shippingFee: 0,
+    discount: 0,
+    paymentMethod: o.paymentMethod ?? "—",
+    trackingCode: o.trackingNumber,
+    carrier: o.trackingNumber ? "Express" : undefined,
+    items,
+    tracking: buildOrderTracking(status, o.date),
+    canReorder: ["delivered", "cancelled"].includes(status),
+    canReturn: status === "delivered",
+    earnedPoints: Math.floor(o.total / 10000),
+  };
+}
+
+// ─── Static fallback data (used until API loads) ──────────────────────────────
+
+const STATIC_ORDERS: Order[] = [
   {
     id: "#8821432",
     status: "shipped",
@@ -662,6 +737,15 @@ function OrderCard({order}:{order:Order}){
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function OrderHistoryPage() {
+  const { data: rawOrders } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => apiGet<MockOrder[]>("/api/orders"),
+  });
+  const ORDERS = useMemo(
+    () => rawOrders ? rawOrders.map(adaptOrder) : STATIC_ORDERS,
+    [rawOrders]
+  );
+
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [search,    setSearch]    = useState("");
   const [sort,      setSort]      = useState<SortKey>("newest");

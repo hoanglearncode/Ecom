@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getProduct, getProducts } from "@/features/products/api";
+import type { Product as APIProduct } from "@/features/products/types";
 import {
   Star, Heart, ShoppingCart, Share2, ChevronRight, Shield,
   Truck, RotateCcw, Zap, Flame, CheckCircle2, Plus, Minus,

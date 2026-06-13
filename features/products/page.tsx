@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getProducts } from "@/features/products/api";
+import type { Product as APIProduct } from "@/features/products/types";
 import {
   Search, Star, Heart, ShoppingCart, SlidersHorizontal,
   ChevronRight, ChevronDown, ChevronUp, X, Plus, Minus,
@@ -9,6 +12,7 @@ import {
   CheckCircle2, TrendingUp, Package, BadgePercent,
   MapPin, Clock, ArrowRight, Home, Layers,
 } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,127 +62,36 @@ interface FilterState {
   onSale:   boolean;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Adapter ─────────────────────────────────────────────────────────────────
 
-const PRODUCTS: Product[] = [
-  {
-    id: "P001", name: "Biti's Hunter X Street 2026 – Phiên Bản Hè",
-    image: "👟", brand: "Biti's Hunter", brandEmoji: "👟", category: "Giày thể thao",
-    price: 449000, originalPrice: 749000,
-    rating: 4.9, reviewCount: 12400, soldCount: 38400, stock: 12,
-    isNew: false, isHot: true,  isSale: true,  isFlash: true,  isFreeShip: true,  isAuthentic: true,
-    platform: "shopee", colors: ["#1a1a2e","#f97316","#ffffff"],
-    tags: ["Flash sale","Bán chạy"], description: "Thiết kế năng động, đế cushion siêu êm.",
-    flashEndMins: 47,
-  },
-  {
-    id: "P002", name: "Nike Air Max 270 Nam – Chính Hãng",
-    image: "🏃", brand: "Nike VN", brandEmoji: "🏃", category: "Giày thể thao",
-    price: 2190000, originalPrice: 3490000,
-    rating: 4.9, reviewCount: 8800, soldCount: 12300, stock: 32,
-    isNew: false, isHot: true,  isSale: true,  isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "lazada", colors: ["#f97316","#1a1a2e","#3b82f6"],
-    sizes: ["39","40","41","42","43","44"],
-    tags: ["Chính hãng","Hot"], description: "Công nghệ Air Max 270, cổ giày cao êm chân.",
-  },
-  {
-    id: "P003", name: "Biti's Hunter Lite Go – Siêu Nhẹ 188g",
-    image: "🏃", brand: "Biti's Hunter", brandEmoji: "👟", category: "Giày thể thao",
-    price: 379000, originalPrice: 549000,
-    rating: 4.8, reviewCount: 6300, soldCount: 16500, stock: 65,
-    isNew: false, isHot: false, isSale: true,  isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "tiki", colors: ["#e0f2fe","#1a1a2e"],
-    sizes: ["36","37","38","39","40","41","42"],
-    tags: ["Siêu nhẹ","Running"], description: "Chỉ 188g, FlexFoam, lý tưởng cho chạy bộ.",
-  },
-  {
-    id: "P004", name: "Sandal Nam Biti's Comfort Pro Active",
-    image: "👡", brand: "Biti's Hunter", brandEmoji: "👟", category: "Sandal",
-    price: 399000, originalPrice: 499000,
-    rating: 4.6, reviewCount: 3200, soldCount: 8200, stock: 88,
-    isNew: false, isHot: false, isSale: true,  isFlash: false, isFreeShip: false, isAuthentic: true,
-    platform: "shopee", colors: ["#1a1a2e","#78350f"],
-    tags: ["Outdoor"], description: "Đế EVA chống sốc, quai điều chỉnh được.",
-  },
-  {
-    id: "P005", name: "Biti's Hunter X Collab – Nghệ Sĩ Trẻ Edition",
-    image: "🎨", brand: "Biti's Hunter", brandEmoji: "👟", category: "Giày thể thao",
-    price: 899000, originalPrice: 899000,
-    rating: 4.9, reviewCount: 2100, soldCount: 4800, stock: 8,
-    isNew: true,  isHot: true,  isSale: false, isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "shopee", colors: ["#7c3aed","#f97316","#10b981"],
-    tags: ["Limited","Collab"], description: "Phiên bản giới hạn, số lượng có hạn.",
-  },
-  {
-    id: "P006", name: "Adidas Ultra Boost 23 Nam",
-    image: "👟", brand: "Adidas VN", brandEmoji: "⚡", category: "Giày thể thao",
-    price: 2890000, originalPrice: 4200000,
-    rating: 4.8, reviewCount: 5600, soldCount: 7300, stock: 21,
-    isNew: false, isHot: false, isSale: true,  isFlash: true,  isFreeShip: true,  isAuthentic: true,
-    platform: "lazada", colors: ["#f8fafc","#1a1a2e","#ef4444"],
-    sizes: ["40","41","42","43","44","45"],
-    tags: ["Flash sale","Running"], description: "Boost cushioning technology, phù hợp chạy marathon.",
-    flashEndMins: 47,
-  },
-  {
-    id: "P007", name: "Converse Chuck Taylor All Star Classic",
-    image: "👟", brand: "Converse VN", brandEmoji: "⭐", category: "Giày thể thao",
-    price: 1290000, originalPrice: 1590000,
-    rating: 4.7, reviewCount: 9200, soldCount: 21000, stock: 140,
-    isNew: false, isHot: false, isSale: true,  isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "tiki", colors: ["#ffffff","#1a1a2e","#ef4444","#3b82f6"],
-    sizes: ["36","37","38","39","40","41","42","43"],
-    tags: ["Classic","Unisex"], description: "Canvas classic, biểu tượng thời trang đường phố.",
-  },
-  {
-    id: "P008", name: "New Balance 574 Leather Phong Cách",
-    image: "👟", brand: "New Balance", brandEmoji: "🔵", category: "Giày thể thao",
-    price: 1850000, originalPrice: 2390000,
-    rating: 4.6, reviewCount: 3400, soldCount: 5600, stock: 44,
-    isNew: true,  isHot: false, isSale: true,  isFlash: false, isFreeShip: false, isAuthentic: true,
-    platform: "sendo", colors: ["#6b7280","#1a1a2e","#d4b896"],
-    tags: ["Leather","Lifestyle"], description: "Leather upper, ENCAP midsole công nghệ tiên tiến.",
-  },
-  {
-    id: "P009", name: "Dép Biti's Nữ Quai Ngang Premium Pastel",
-    image: "🩴", brand: "Biti's Hunter", brandEmoji: "👟", category: "Dép & Sandal",
-    price: 299000, originalPrice: 299000,
-    rating: 4.7, reviewCount: 8100, soldCount: 21000, stock: 200,
-    isNew: true,  isHot: false, isSale: false, isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "shopee", colors: ["#fce7f3","#dbeafe","#d1fae5"],
-    tags: ["Mới về","Nữ"], description: "Quai mềm, thiết kế tối giản, màu pastel nhẹ nhàng.",
-  },
-  {
-    id: "P010", name: "Puma RS-X Toys – Retro Chunky Style",
-    image: "👟", brand: "Puma VN", brandEmoji: "🐆", category: "Giày thể thao",
-    price: 1650000, originalPrice: 2200000,
-    rating: 4.5, reviewCount: 2800, soldCount: 4100, stock: 55,
-    isNew: false, isHot: false, isSale: true,  isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "lazada", colors: ["#ffffff","#f97316","#3b82f6"],
-    tags: ["Retro","Chunky"], description: "Thiết kế chunky retro, đế dày êm, phong cách 90s.",
-  },
-  {
-    id: "P011", name: "Vans Old Skool Classic Low Top",
-    image: "👟", brand: "Vans VN", brandEmoji: "🖤", category: "Giày thể thao",
-    price: 1450000, originalPrice: 1750000,
-    rating: 4.8, reviewCount: 11200, soldCount: 28000, stock: 180,
-    isNew: false, isHot: true,  isSale: true,  isFlash: false, isFreeShip: true,  isAuthentic: true,
-    platform: "tiki", colors: ["#1a1a2e","#ffffff","#ef4444"],
-    sizes: ["36","37","38","39","40","41","42","43"],
-    tags: ["Classic","Skate"], description: "Canvas & suede upper, waffle sole bền bỉ.",
-  },
-  {
-    id: "P012", name: "Phụ kiện – Túi Bảo Vệ Giày Biti's",
-    image: "👜", brand: "Biti's Hunter", brandEmoji: "👟", category: "Phụ kiện",
-    price: 79000, originalPrice: 99000,
-    rating: 4.4, reviewCount: 920, soldCount: 6800, stock: 400,
-    isNew: false, isHot: false, isSale: true,  isFlash: false, isFreeShip: false, isAuthentic: true,
-    platform: "shopee", colors: ["#1a1a2e"],
-    tags: ["Phụ kiện"], description: "Túi vải cao cấp, khoá kéo chống bụi.",
-  },
-];
-
-const BRANDS = [...new Set(PRODUCTS.map(p => p.brand))];
+function adaptProduct(p: APIProduct): Product {
+  const isSale = !!p.compareAtPrice && p.compareAtPrice > p.price;
+  return {
+    id: p.id,
+    name: p.name,
+    image: p.thumbnail ?? "📦",
+    brand: p.brand ?? "—",
+    brandEmoji: "🏷️",
+    category: p.categoryName ?? p.categorySlug ?? "Khác",
+    price: p.price,
+    originalPrice: p.compareAtPrice ?? p.price,
+    rating: p.rating ?? 4.5,
+    reviewCount: p.reviewCount ?? 0,
+    soldCount: 0,
+    stock: p.stock ?? 0,
+    isNew: false,
+    isHot: (p.rating ?? 0) >= 4.8 && (p.reviewCount ?? 0) > 1000,
+    isSale,
+    isFlash: false,
+    isFreeShip: false,
+    isAuthentic: true,
+    platform: "shopee",
+    colors: p.color ? [p.color] : [],
+    sizes: [],
+    tags: p.tags ?? [],
+    description: p.description ?? "",
+  };
+}
 const PLATFORMS: Platform[] = ["shopee","lazada","tiki","sendo"];
 
 const PLATFORM_CFG: Record<Platform,{label:string;cls:string}> = {
@@ -200,6 +113,13 @@ const PRICE_RANGES = [
 function fmtPrice(n:number){ return new Intl.NumberFormat("vi-VN").format(n)+"₫"; }
 function fmtSold(n:number){ return n>=1000?(n/1000).toFixed(0)+"K":String(n); }
 function discPct(o:number,s:number){ return Math.round(((o-s)/o)*100); }
+
+function ProductImg({ src, alt, cls }: { src: string; alt: string; cls?: string }) {
+  if (src.startsWith("http") || src.startsWith("/")) {
+    return <img src={src} alt={alt} className={cn("object-cover w-full h-full", cls)} />;
+  }
+  return <span>{src}</span>;
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -233,10 +153,10 @@ function ProductGridCard({product,wishlist,onWishlist}:{product:Product;wishlist
   const plt=PLATFORM_CFG[product.platform];
 
   return(
-    <div className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden flex flex-col">
+    <Link href={`/products/${product.id}`} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden flex flex-col">
       {/* Image */}
-      <div className="relative bg-gray-50 h-44 flex items-center justify-center text-5xl shrink-0">
-        {product.image}
+      <div className="relative bg-gray-50 h-44 flex items-center justify-center text-5xl shrink-0 overflow-hidden">
+        <ProductImg src={product.image} alt={product.name} />
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {disc>0 && <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-md font-semibold">-{disc}%</span>}
@@ -313,7 +233,7 @@ function ProductGridCard({product,wishlist,onWishlist}:{product:Product;wishlist
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -324,10 +244,10 @@ function ProductListRow({product,wishlist,onWishlist}:{product:Product;wishlist:
   const plt=PLATFORM_CFG[product.platform];
 
   return(
-    <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 p-3.5 group">
+    <Link href={`/products/${product.id}`} className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 p-3.5 group">
       {/* Image */}
-      <div className="relative w-20 h-20 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-3xl shrink-0">
-        {product.image}
+      <div className="relative w-20 h-20 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-3xl shrink-0 overflow-hidden">
+        <ProductImg src={product.image} alt={product.name} />
         {disc>0&&<span className="absolute -top-1.5 -right-1.5 text-[9px] bg-red-500 text-white px-1 py-0.5 rounded font-bold">-{disc}%</span>}
       </div>
 
@@ -360,22 +280,26 @@ function ProductListRow({product,wishlist,onWishlist}:{product:Product;wishlist:
 
       {/* Actions */}
       <div className="flex flex-col gap-1.5 shrink-0">
-        <button onClick={()=>onWishlist(product.id)}
+        <button onClick={e=>{e.preventDefault();onWishlist(product.id);}}
           className={cn("w-8 h-8 rounded-lg border flex items-center justify-center transition-all",
             liked?"border-red-200 bg-red-50 text-red-500":"border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400")}>
           <Heart size={14} className={liked?"fill-red-500":""}/>
         </button>
-        <Button size="sm" className="h-8 w-8 p-0 bg-[#1a1a2e] hover:bg-[#2d2d4a] text-white">
+        <Button size="sm" onClick={e=>e.preventDefault()} className="h-8 w-8 p-0 bg-[#1a1a2e] hover:bg-[#2d2d4a] text-white">
           <ShoppingCart size={13}/>
         </Button>
       </div>
-    </div>
+    </Link>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProductListPage() {
+  const { data: rawProducts = [] } = useQuery({ queryKey: ["products"], queryFn: getProducts });
+  const PRODUCTS = useMemo(() => rawProducts.map(adaptProduct), [rawProducts]);
+  const BRANDS = useMemo(() => [...new Set(PRODUCTS.map(p => p.brand))], [PRODUCTS]);
+
   const [search,      setSearch]      = useState("");
   const [viewMode,    setViewMode]    = useState<ViewMode>("grid4");
   const [sortKey,     setSortKey]     = useState<SortKey>("popular");
@@ -390,6 +314,8 @@ export default function ProductListPage() {
     brands: new Set(), platforms: new Set(),
     tags: new Set(), freeShip: false, authentic: false, onSale: false,
   });
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 24;
 
   function toggleWishlist(id:string){
     setWishlist(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});
@@ -433,7 +359,14 @@ export default function ProductListPage() {
         if(sortKey==="newest")     return (b.isNew?1:0)-(a.isNew?1:0);
         return b.soldCount-a.soldCount;
       });
-  },[search,filters,sortKey]);
+  },[search,filters,sortKey,PRODUCTS]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage, PAGE_SIZE]
+  );
 
   const activeFilterCount = [
     filters.brands.size, filters.platforms.size,
@@ -661,7 +594,7 @@ export default function ProductListPage() {
             {filtered.length>0?(
               viewMode==="list"?(
                 <div className="flex flex-col gap-2">
-                  {filtered.map(p=>(
+                  {paginated.map(p=>(
                     <ProductListRow key={p.id} product={p} wishlist={wishlist} onWishlist={toggleWishlist}/>
                   ))}
                 </div>
@@ -670,7 +603,7 @@ export default function ProductListPage() {
                   "grid gap-3",
                   viewMode==="grid4"?"grid-cols-2 md:grid-cols-3 lg:grid-cols-4":"grid-cols-2 md:grid-cols-3"
                 )}>
-                  {filtered.map(p=>(
+                  {paginated.map(p=>(
                     <ProductGridCard key={p.id} product={p} wishlist={wishlist} onWishlist={toggleWishlist}/>
                   ))}
                 </div>
@@ -691,14 +624,32 @@ export default function ProductListPage() {
             {filtered.length>0&&(
               <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3">
                 <p className="text-[12px] text-gray-400">
-                  Hiển thị <span className="font-medium text-gray-700">{filtered.length}</span> / {PRODUCTS.length} sản phẩm
+                  Hiển thị <span className="font-medium text-gray-700">{(currentPage-1)*PAGE_SIZE+1}–{Math.min(currentPage*PAGE_SIZE,filtered.length)}</span> / {filtered.length} sản phẩm
                 </p>
-                <div className="flex gap-1">
-                  {["←","1","2","3","...","24","→"].map((p,i)=>(
-                    <button key={i} className={cn("w-8 h-8 rounded-lg text-[12px] border transition-colors",
-                      p==="1"?"bg-[#1a1a2e] text-white border-[#1a1a2e]":"text-gray-500 border-gray-200 hover:bg-gray-50")}>{p}</button>
-                  ))}
-                </div>
+                {totalPages>1&&(
+                  <div className="flex gap-1">
+                    <button disabled={currentPage===1} onClick={()=>setPage(p=>Math.max(1,p-1))}
+                      className={cn("w-8 h-8 rounded-lg text-[12px] border transition-colors",
+                        currentPage===1?"text-gray-300 border-gray-100 cursor-not-allowed":"text-gray-500 border-gray-200 hover:bg-gray-50")}>←</button>
+                    {Array.from({length:Math.min(5,totalPages)},((_,i)=>{
+                      let pg:number;
+                      if(totalPages<=5) pg=i+1;
+                      else if(currentPage<=3) pg=i+1;
+                      else if(currentPage>=totalPages-2) pg=totalPages-4+i;
+                      else pg=currentPage-2+i;
+                      return(
+                        <button key={pg} onClick={()=>setPage(pg)}
+                          className={cn("w-8 h-8 rounded-lg text-[12px] border transition-colors",
+                            pg===currentPage?"bg-[#1a1a2e] text-white border-[#1a1a2e]":"text-gray-500 border-gray-200 hover:bg-gray-50")}>
+                          {pg}
+                        </button>
+                      );
+                    }))}
+                    <button disabled={currentPage===totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}
+                      className={cn("w-8 h-8 rounded-lg text-[12px] border transition-colors",
+                        currentPage===totalPages?"text-gray-300 border-gray-100 cursor-not-allowed":"text-gray-500 border-gray-200 hover:bg-gray-50")}>→</button>
+                  </div>
+                )}
               </div>
             )}
           </div>

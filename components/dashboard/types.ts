@@ -15,6 +15,7 @@ export interface CategoryPoint {
 
 export interface TopProduct {
   name: string;
+  image?: string;
   sales: number;
   revenue: number;
   growth: number;
