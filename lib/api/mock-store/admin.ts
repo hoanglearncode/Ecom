@@ -17,9 +17,8 @@ import type {
 import { mockBrands } from "./brands";
 import { mockCategories } from "./categories";
 import { mockInventory } from "./inventory";
-import { mockOrders, getOrderStats } from "./orders-enhanced";
+import { mockOrders, mockCustomers, getOrderStats } from "./orders-enhanced";
 import { mockProducts } from "./products";
-import { mockCustomers } from "./customers";
 import { mockAdminReports as mockAdminReportsFull } from "./mock-admin-reports";
 
 // ─── Derived values ─────────────────────────────────────────────────────────
@@ -415,19 +414,35 @@ export const mockAdminBrands: AdminBrandsData = {
 
 // ─── Customers ─────────────────────────────────────────────────────────────
 
-const customerStatuses = ["VIP", "Active", "At risk"] as const;
+// Build lastOrderAt index from orders
+const lastOrderByCustomerId: Record<string, string> = {};
+mockOrders.forEach((o) => {
+  if (!o.customerId) return;
+  const cur = lastOrderByCustomerId[o.customerId];
+  if (!cur || o.date > cur) lastOrderByCustomerId[o.customerId] = o.date;
+});
+
+const activeCount = mockCustomers.filter((c) => c.status === "active").length;
+const blockedCount = mockCustomers.filter((c) => c.status === "blocked").length;
 
 export const mockAdminCustomers: AdminCustomersData = {
   metrics: [
     { label: "Total customers", value: `${mockCustomers.length}` },
-    { label: "Active", value: `${mockCustomers.length - 1}` },
-    { label: "At risk", value: "1" },
+    { label: "Active", value: `${activeCount}` },
+    { label: "Blocked", value: `${blockedCount}` },
   ],
-  customers: mockCustomers.map((customer, index) => ({
-    name: customer.name,
-    email: customer.email ?? "-",
-    phone: customer.phone ?? "-",
-    status: customerStatuses[index % customerStatuses.length],
+  customers: mockCustomers.map((c) => ({
+    id: c.id,
+    name: c.name,
+    email: c.email ?? "",
+    phone: c.phone ?? "",
+    city: c.city ?? "",
+    status: (c.status ?? "active") as "active" | "inactive" | "blocked",
+    tier: (c.tier ?? "bronze") as "bronze" | "silver" | "gold" | "platinum",
+    totalOrders: c.totalOrders ?? 0,
+    totalSpent: c.totalSpent ?? 0,
+    lastOrderAt: lastOrderByCustomerId[c.id],
+    createdAt: c.createdAt ?? "",
   })),
 };
 

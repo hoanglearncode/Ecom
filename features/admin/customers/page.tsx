@@ -1,20 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   RefreshCw,
   Plus,
   Search,
-  Store,
-  Package,
-  ShoppingCart,
-  BarChart2,
-  Star,
-  Users,
-  FileText,
-  Settings,
-  MoreHorizontal,
   Eye,
   Pencil,
   MoreVertical,
@@ -32,10 +24,10 @@ import {
   CalendarDays,
   ShoppingBag,
   Wallet,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -46,6 +38,8 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { AdminPagination, usePagination, paginateData } from "@/components/admin";
+import { getAdminCustomers } from "../api";
+import type { AdminCustomer } from "../types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,163 +63,90 @@ interface Customer {
   avatar: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Data adapters ────────────────────────────────────────────────────────────
 
-const CUSTOMERS: Customer[] = [
-  {
-    id: 1,
-    name: "Nguyễn Thị Lan",
-    email: "lan.nguyen@gmail.com",
-    phone: "0912 345 678",
-    city: "Hà Nội",
-    tier: "diamond",
-    status: "active",
-    totalOrders: 148,
-    totalSpent: "42.3 tr",
-    lastOrder: "2 giờ trước",
-    joinDate: "Th1/2021",
-    avatar: "NL",
-  },
-  {
-    id: 2,
-    name: "Trần Minh Khoa",
-    email: "khoa.tran@outlook.com",
-    phone: "0987 654 321",
-    city: "TP.HCM",
-    tier: "gold",
-    status: "active",
-    totalOrders: 87,
-    totalSpent: "18.6 tr",
-    lastOrder: "1 ngày trước",
-    joinDate: "Th3/2022",
-    avatar: "TK",
-  },
-  {
-    id: 3,
-    name: "Lê Thị Hoa",
-    email: "hoa.le@gmail.com",
-    phone: "0903 111 222",
-    city: "Đà Nẵng",
-    tier: "gold",
-    status: "active",
-    totalOrders: 64,
-    totalSpent: "11.2 tr",
-    lastOrder: "3 ngày trước",
-    joinDate: "Th6/2022",
-    avatar: "LH",
-  },
-  {
-    id: 4,
-    name: "Phạm Văn Đức",
-    email: "duc.pham@yahoo.com",
-    phone: "0978 333 444",
-    city: "Hải Phòng",
-    tier: "silver",
-    status: "active",
-    totalOrders: 32,
-    totalSpent: "5.4 tr",
-    lastOrder: "1 tuần trước",
-    joinDate: "Th9/2022",
-    avatar: "PĐ",
-  },
-  {
-    id: 5,
-    name: "Hoàng Thị Mai",
-    email: "mai.hoang@gmail.com",
-    phone: "0965 555 666",
-    city: "Cần Thơ",
-    tier: "diamond",
-    status: "active",
-    totalOrders: 203,
-    totalSpent: "67.8 tr",
-    lastOrder: "5 giờ trước",
-    joinDate: "Th11/2020",
-    avatar: "HM",
-  },
-  {
-    id: 6,
-    name: "Vũ Quốc Hùng",
-    email: "hung.vu@gmail.com",
-    phone: "0901 777 888",
-    city: "Hà Nội",
-    tier: "basic",
-    status: "inactive",
-    totalOrders: 7,
-    totalSpent: "890 k",
-    lastOrder: "2 tháng trước",
-    joinDate: "Th4/2023",
-    avatar: "VH",
-  },
-  {
-    id: 7,
-    name: "Đặng Thị Thu",
-    email: "thu.dang@gmail.com",
-    phone: "0923 999 000",
-    city: "TP.HCM",
-    tier: "silver",
-    status: "active",
-    totalOrders: 45,
-    totalSpent: "7.1 tr",
-    lastOrder: "4 ngày trước",
-    joinDate: "Th2/2023",
-    avatar: "ĐT",
-  },
-  {
-    id: 8,
-    name: "Bùi Thanh Tùng",
-    email: "tung.bui@hotmail.com",
-    phone: "0911 222 333",
-    city: "Bình Dương",
-    tier: "basic",
-    status: "blocked",
-    totalOrders: 3,
-    totalSpent: "320 k",
-    lastOrder: "5 tháng trước",
-    joinDate: "Th8/2023",
-    avatar: "BT",
-  },
-  {
-    id: 9,
-    name: "Ngô Thị Bích",
-    email: "bich.ngo@gmail.com",
-    phone: "0933 444 555",
-    city: "Huế",
-    tier: "gold",
-    status: "active",
-    totalOrders: 73,
-    totalSpent: "14.9 tr",
-    lastOrder: "Hôm nay",
-    joinDate: "Th5/2021",
-    avatar: "NB",
-  },
-  {
-    id: 10,
-    name: "Trịnh Văn Nam",
-    email: "nam.trinh@gmail.com",
-    phone: "0945 666 777",
-    city: "Hà Nội",
-    tier: "silver",
-    status: "inactive",
-    totalOrders: 19,
-    totalSpent: "2.8 tr",
-    lastOrder: "3 tuần trước",
-    joinDate: "Th10/2022",
-    avatar: "TN",
-  },
-];
+const TIER_MAP: Record<AdminCustomer["tier"], CustomerTier> = {
+  platinum: "diamond",
+  gold: "gold",
+  silver: "silver",
+  bronze: "basic",
+};
+
+const TODAY = new Date("2026-06-13");
+
+function formatSpent(amount: number): string {
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)} tr`;
+  if (amount >= 1_000) return `${Math.round(amount / 1_000)} k`;
+  return `${amount} đ`;
+}
+
+function formatRelativeDate(dateStr?: string): string {
+  if (!dateStr) return "Chưa có";
+  const diff = Math.floor((TODAY.getTime() - new Date(dateStr).getTime()) / 86_400_000);
+  if (diff <= 0) return "Hôm nay";
+  if (diff === 1) return "Hôm qua";
+  if (diff < 7) return `${diff} ngày trước`;
+  if (diff < 30) return `${Math.floor(diff / 7)} tuần trước`;
+  if (diff < 365) return `${Math.floor(diff / 30)} tháng trước`;
+  return `${Math.floor(diff / 365)} năm trước`;
+}
+
+function formatJoinDate(dateStr: string): string {
+  const [year, month] = dateStr.split("-");
+  return `Th${parseInt(month)}/${year}`;
+}
+
+function getInitials(name: string): string {
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
+
+function getAvatarColor(initials: string): string {
+  const palette = [
+    "bg-pink-100 text-pink-700",
+    "bg-blue-100 text-blue-700",
+    "bg-emerald-100 text-emerald-700",
+    "bg-orange-100 text-orange-700",
+    "bg-purple-100 text-purple-700",
+    "bg-teal-100 text-teal-700",
+    "bg-indigo-100 text-indigo-700",
+    "bg-yellow-100 text-yellow-700",
+    "bg-red-100 text-red-600",
+    "bg-sky-100 text-sky-700",
+    "bg-violet-100 text-violet-700",
+    "bg-amber-100 text-amber-700",
+  ];
+  const hash = [...initials].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return palette[hash % palette.length];
+}
+
+function adaptCustomer(c: AdminCustomer, idx: number): Customer {
+  const initials = getInitials(c.name);
+  return {
+    id: idx + 1,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    city: c.city,
+    tier: TIER_MAP[c.tier] ?? "basic",
+    status: c.status,
+    totalOrders: c.totalOrders,
+    totalSpent: formatSpent(c.totalSpent),
+    lastOrder: formatRelativeDate(c.lastOrderAt),
+    joinDate: c.createdAt ? formatJoinDate(c.createdAt) : "–",
+    avatar: initials,
+  };
+}
+
+// ─── Static chart data (illustrative) ────────────────────────────────────────
 
 const CHART_DATA = {
   months: ["Th7", "Th8", "Th9", "Th10", "Th11", "Th12", "Th1"],
   new: [124, 148, 139, 167, 182, 210, 195],
   returning: [380, 410, 395, 430, 460, 490, 475],
 };
-
-const TOP_CUSTOMERS = [
-  { name: "Hoàng Thị Mai", city: "Cần Thơ", spent: "67.8 tr", orders: 203, avatar: "HM", tier: "diamond" as CustomerTier },
-  { name: "Nguyễn Thị Lan", city: "Hà Nội", spent: "42.3 tr", orders: 148, avatar: "NL", tier: "diamond" as CustomerTier },
-  { name: "Trần Minh Khoa", city: "TP.HCM", spent: "18.6 tr", orders: 87, avatar: "TK", tier: "gold" as CustomerTier },
-  { name: "Ngô Thị Bích", city: "Huế", spent: "14.9 tr", orders: 73, avatar: "NB", tier: "gold" as CustomerTier },
-];
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -242,23 +163,10 @@ const TIER_CONFIG: Record<CustomerTier, { label: string; icon: string; className
   basic: { label: "Basic", icon: "🔵", className: "text-blue-600 bg-blue-50 border-blue-200", badge: "bg-blue-50 text-blue-700" },
 };
 
-const AVATAR_COLORS: Record<string, string> = {
-  NL: "bg-pink-100 text-pink-700",
-  TK: "bg-blue-100 text-blue-700",
-  LH: "bg-emerald-100 text-emerald-700",
-  PĐ: "bg-orange-100 text-orange-700",
-  HM: "bg-purple-100 text-purple-700",
-  VH: "bg-gray-100 text-gray-600",
-  ĐT: "bg-teal-100 text-teal-700",
-  BT: "bg-red-100 text-red-600",
-  NB: "bg-indigo-100 text-indigo-700",
-  TN: "bg-yellow-100 text-yellow-700",
-};
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function CustomerAvatar({ initials, size = "md" }: { initials: string; size?: "sm" | "md" }) {
-  const color = AVATAR_COLORS[initials] ?? "bg-gray-100 text-gray-600";
+  const color = getAvatarColor(initials);
   const dim = size === "sm" ? "w-7 h-7 text-[11px]" : "w-8 h-8 text-[12px]";
   return (
     <div className={cn("rounded-full flex items-center justify-center font-medium shrink-0", dim, color)}>
@@ -302,10 +210,10 @@ function MiniBarChart() {
   );
 }
 
-function TierDistribution() {
-  const total = CUSTOMERS.length;
+function TierDistribution({ customers }: { customers: Customer[] }) {
+  const total = customers.length;
   const counts: Record<CustomerTier, number> = { diamond: 0, gold: 0, silver: 0, basic: 0 };
-  CUSTOMERS.forEach((c) => counts[c.tier]++);
+  customers.forEach((c) => counts[c.tier]++);
   const tiers: CustomerTier[] = ["diamond", "gold", "silver", "basic"];
   const barColors: Record<CustomerTier, string> = {
     diamond: "bg-sky-400",
@@ -346,6 +254,42 @@ export default function CustomerManagementPage() {
   const [search, setSearch] = useState("");
   const { state: pagination, onStateChange: setPagination, reset: resetPagination } = usePagination({ pageSize: 10 });
 
+  const { data, refetch } = useQuery({
+    queryKey: ["admin-customers"],
+    queryFn: getAdminCustomers,
+  });
+
+  // Adapt API data → page Customer shape
+  const customers = useMemo<Customer[]>(
+    () => (data?.customers ?? []).map(adaptCustomer),
+    [data]
+  );
+
+  // Top 4 by totalSpent
+  const topCustomers = useMemo(
+    () =>
+      [...(data?.customers ?? [])]
+        .sort((a, b) => b.totalSpent - a.totalSpent)
+        .slice(0, 4)
+        .map((c, i) => ({
+          name: c.name,
+          city: c.city,
+          spent: formatSpent(c.totalSpent),
+          orders: c.totalOrders,
+          avatar: getInitials(c.name),
+          tier: (TIER_MAP[c.tier] ?? "basic") as CustomerTier,
+        })),
+    [data]
+  );
+
+  // Metrics derived from real data
+  const activeCount = useMemo(() => customers.filter((c) => c.status === "active").length, [customers]);
+  const blockedCount = useMemo(() => customers.filter((c) => c.status === "blocked").length, [customers]);
+  const newThisMonth = useMemo(
+    () => (data?.customers ?? []).filter((c) => c.createdAt >= "2026-05-13").length,
+    [data]
+  );
+
   const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: "Tất cả" },
     { key: "active", label: "Hoạt động" },
@@ -353,11 +297,9 @@ export default function CustomerManagementPage() {
     { key: "blocked", label: "Bị chặn" },
   ];
 
-  // Reset pagination when filters change
   React.useEffect(() => {
     resetPagination();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeSegment]);
+  }, [activeTab, activeSegment, resetPagination]);
 
   const segments: { key: SegmentKey; label: string }[] = [
     { key: "all", label: "Tất cả hạng" },
@@ -367,7 +309,7 @@ export default function CustomerManagementPage() {
     { key: "basic", label: "🔵 Basic" },
   ];
 
-  const filtered = CUSTOMERS.filter((c) => {
+  const filtered = customers.filter((c) => {
     const matchTab = activeTab === "all" || c.status === activeTab;
     const matchSeg = activeSegment === "all" || c.tier === activeSegment;
     const matchSearch =
@@ -380,16 +322,11 @@ export default function CustomerManagementPage() {
 
   const paginatedCustomers = paginateData(filtered, pagination.page, pagination.pageSize);
 
-  // Reset pagination when filters change
-  React.useEffect(() => {
-    resetPagination();
-  }, [activeTab, activeSegment, resetPagination]);
-
   const tabCounts: Record<TabKey, number> = {
-    all: CUSTOMERS.length,
-    active: CUSTOMERS.filter((c) => c.status === "active").length,
-    inactive: CUSTOMERS.filter((c) => c.status === "inactive").length,
-    blocked: CUSTOMERS.filter((c) => c.status === "blocked").length,
+    all: customers.length,
+    active: customers.filter((c) => c.status === "active").length,
+    inactive: customers.filter((c) => c.status === "inactive").length,
+    blocked: customers.filter((c) => c.status === "blocked").length,
   };
 
   return (
@@ -414,7 +351,10 @@ export default function CustomerManagementPage() {
               <Bell size={15} />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500 border border-white" />
             </button>
-            <button className="w-8 h-8 rounded-lg border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
+            <button
+              onClick={() => refetch()}
+              className="w-8 h-8 rounded-lg border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
+            >
               <RefreshCw size={14} />
             </button>
             <Button size="sm" className="bg-[#1a1a2e] hover:bg-[#2d2d4a] text-white h-8 text-[13px] gap-1.5">
@@ -431,7 +371,7 @@ export default function CustomerManagementPage() {
             {[
               {
                 label: "Tổng khách hàng",
-                value: "12,480",
+                value: customers.length.toLocaleString(),
                 change: "+9.4%",
                 up: true,
                 sub: "so với tháng trước",
@@ -441,7 +381,7 @@ export default function CustomerManagementPage() {
               },
               {
                 label: "Khách hoạt động",
-                value: "9,310",
+                value: activeCount.toLocaleString(),
                 change: "+5.2%",
                 up: true,
                 sub: "trong 30 ngày qua",
@@ -451,7 +391,7 @@ export default function CustomerManagementPage() {
               },
               {
                 label: "Khách mới tháng này",
-                value: "195",
+                value: newThisMonth.toLocaleString(),
                 change: "-7.1%",
                 up: false,
                 sub: "so với tháng trước",
@@ -461,7 +401,7 @@ export default function CustomerManagementPage() {
               },
               {
                 label: "Tài khoản bị chặn",
-                value: "48",
+                value: blockedCount.toLocaleString(),
                 change: "+3",
                 up: false,
                 sub: "cần xem xét",
@@ -515,7 +455,7 @@ export default function CustomerManagementPage() {
                 <h2 className="text-[14px] font-medium text-gray-900">Phân hạng</h2>
                 <Crown size={14} className="text-amber-500" />
               </div>
-              <TierDistribution />
+              <TierDistribution customers={customers} />
               <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
                 <div className="text-center">
                   <p className="text-lg font-medium text-gray-900">74%</p>
@@ -535,7 +475,7 @@ export default function CustomerManagementPage() {
                 <button className="text-xs text-blue-600 hover:underline">Xem tất cả</button>
               </div>
               <div className="space-y-0.5">
-                {TOP_CUSTOMERS.map((c) => {
+                {topCustomers.map((c) => {
                   const tierCfg = TIER_CONFIG[c.tier];
                   return (
                     <div

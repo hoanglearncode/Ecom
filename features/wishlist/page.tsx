@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getProducts } from "@/features/products/api";
+import type { Product as APIProduct } from "@/features/products/types";
 import {
   Heart, ShoppingCart, Trash2, Share2, Bell, Search,
   Star, X, Plus, Minus, ChevronRight, Tag, Truck,
@@ -13,6 +16,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+
+function ProductImg({ src, alt, cls }: { src: string; alt: string; cls?: string }) {
+  if (src.startsWith("http") || src.startsWith("/")) {
+    return <img src={src} alt={alt} className={cn("object-cover w-full h-full", cls)} />;
+  }
+  return <span>{src}</span>;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +64,39 @@ interface WishlistCollection {
   isDefault: boolean;
 }
 
+// ─── Adapter ─────────────────────────────────────────────────────────────────
+
+function adaptWishlistItem(p: APIProduct, idx: number): WishlistItem {
+  const compareAt = p.compareAtPrice ?? p.price;
+  const isOnSale = !!p.compareAtPrice && p.compareAtPrice > p.price;
+  const priceDrop = isOnSale ? Math.round(((compareAt - p.price) / compareAt) * 100) : 0;
+  const dates = ["Hôm nay","Hôm qua","2 ngày trước","3 ngày trước","4 ngày trước","5 ngày trước","1 tuần trước","2 tuần trước","1 tháng trước"];
+  return {
+    id: p.id,
+    name: p.name,
+    image: p.thumbnail ?? "📦",
+    brand: p.brand ?? "—",
+    brandEmoji: "🏷️",
+    price: p.price,
+    originalPrice: compareAt,
+    rating: p.rating ?? 4.5,
+    reviewCount: p.reviewCount ?? 0,
+    soldCount: 0,
+    stock: p.stock ?? 0,
+    inStock: (p.stock ?? 0) > 0,
+    isOnSale,
+    isNew: false,
+    isFlash: false,
+    addedDate: dates[Math.min(idx, dates.length - 1)],
+    addedDaysAgo: idx,
+    platform: "shopee",
+    colors: p.color ? [p.color] : [],
+    collection: "all",
+    priceDropped: priceDrop >= 10,
+    priceDrop,
+  };
+}
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const COLLECTIONS: WishlistCollection[] = [
@@ -63,7 +107,7 @@ const COLLECTIONS: WishlistCollection[] = [
   { id: "tech",      name: "Tech wishlist",     emoji: "📱",  count: 2,  isDefault: false },
 ];
 
-const ITEMS: WishlistItem[] = [
+const STATIC_ITEMS: WishlistItem[] = [
   {
     id: "W001", name: "Biti's Hunter X Street 2026 – Phiên Bản Hè",
     image: "👟", brand: "Biti's Hunter", brandEmoji: "👟",
@@ -235,8 +279,8 @@ function GridCard({
       isSel ? "border-[#1a1a2e] ring-2 ring-[#1a1a2e]/10" : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
     )}>
       {/* Image */}
-      <div className="relative bg-gray-50 h-40 flex items-center justify-center text-5xl shrink-0">
-        {item.image}
+      <Link href={`/products/${item.id}`} className="relative bg-gray-50 h-40 flex items-center justify-center text-5xl shrink-0 overflow-hidden block">
+        <ProductImg src={item.image} alt={item.name} />
 
         {/* Select checkbox */}
         <button
@@ -270,7 +314,7 @@ function GridCard({
           title="Xoá khỏi danh sách">
           <Trash2 size={12} />
         </button>
-      </div>
+      </Link>
 
       {/* Content */}
       <div className="p-3 flex flex-col flex-1">
@@ -371,14 +415,14 @@ function ListRow({
       </button>
 
       {/* Image */}
-      <div className="relative w-16 h-16 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-3xl shrink-0">
-        {item.image}
+      <Link href={`/products/${item.id}`} className="relative w-16 h-16 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center text-3xl shrink-0 overflow-hidden block">
+        <ProductImg src={item.image} alt={item.name} />
         {!item.inStock && (
           <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center">
             <span className="text-[9px] text-gray-500 font-medium">Hết</span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -437,7 +481,19 @@ function ListRow({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function WishlistPage() {
-  const [items, setItems]           = useState<WishlistItem[]>(ITEMS);
+  const { data: rawProducts } = useQuery({ queryKey: ["products"], queryFn: getProducts });
+  const apiItems = useMemo(
+    () => rawProducts ? rawProducts.map((p, i) => adaptWishlistItem(p, i)) : null,
+    [rawProducts]
+  );
+  const seeded = useRef(false);
+  const [items, setItems] = useState<WishlistItem[]>(STATIC_ITEMS);
+  useEffect(() => {
+    if (!seeded.current && apiItems && apiItems.length > 0) {
+      setItems(apiItems);
+      seeded.current = true;
+    }
+  }, [apiItems]);
   const [activeCol, setActiveCol]   = useState("all");
   const [filter, setFilter]         = useState<WishlistFilter>("all");
   const [sortKey, setSortKey]       = useState<SortKey>("added_date");
@@ -727,7 +783,7 @@ export default function WishlistPage() {
                     { name: "Kem dưỡng Ultimune SPF30", image: "🧴", price: "720k", brand: "Shiseido"},
                   ].map((p, i) => (
                     <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/60 cursor-pointer transition-all group">
-                      <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-xl shrink-0">{p.image}</div>
+                      <div className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-xl shrink-0 overflow-hidden"><ProductImg src={p.image} alt={p.name} /></div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-medium text-gray-800 truncate">{p.name}</p>
                         <p className="text-[10px] text-gray-400">{p.brand}</p>

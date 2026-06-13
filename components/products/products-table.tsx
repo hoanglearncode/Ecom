@@ -42,7 +42,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -53,7 +52,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ProductStatusBadge from "@/components/products/product-status-badge";
-import { ProductDialog } from "@/components/products/product-form";
 import { CategoryCombobox } from "@/components/products/product-category";
 import {
   Search,
@@ -115,10 +113,7 @@ export default function ProductsTable({
   const [pageSize, setPageSize] = useState(10);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openPageBox, setOpenPageBox] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"add" | "edit" | "view" | null>(
-    null,
-  );
-  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const router = useRouter();
 
@@ -287,56 +282,6 @@ export default function ProductsTable({
     setSelected(new Set());
   };
 
-  const handleSubmit = (data: any) => {
-    const categoryLabel =
-      categoryOptions.find((option) => option.value === data.categoryKey)
-        ?.label ?? "Chưa phân loại";
-    const normalizedStatus =
-      data.status === "out_of_stock" ? "active" : data.status;
-    const normalizedStock = data.status === "out_of_stock" ? 0 : data.stock;
-    const today = new Date().toISOString().slice(0, 10);
-
-    if (dialogMode === "edit" && activeProduct) {
-      setProducts((ps) =>
-        ps.map((product) =>
-          product.id === activeProduct.id
-            ? {
-                ...product,
-                name: data.name,
-                sku: data.sku,
-                categorySlug: data.categoryKey,
-                categoryName: categoryLabel,
-                status: normalizedStatus,
-                price: data.price,
-                stock: normalizedStock,
-                description: data.description ?? "",
-                releaseDate: today,
-              }
-            : product,
-        ),
-      );
-    } else {
-      const currency =
-        products.find((product) => product.currency)?.currency ?? "USD";
-      const newProduct: Product = {
-        id: `p${Date.now()}`,
-        name: data.name,
-        sku: data.sku,
-        categorySlug: data.categoryKey,
-        categoryName: categoryLabel,
-        status: normalizedStatus,
-        price: data.price,
-        stock: normalizedStock,
-        currency,
-        description: data.description ?? "",
-        releaseDate: today,
-      };
-      setProducts((ps) => [newProduct, ...ps]);
-    }
-    setDialogMode(null);
-    setActiveProduct(null);
-  };
-
   const formatPrice = (price: number) => {
     const currency =
       products.find((product) => product.currency)?.currency ?? "USD";
@@ -414,10 +359,7 @@ export default function ProductsTable({
               <Button
                 size="sm"
                 className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={() => {
-                  setActiveProduct(null);
-                  setDialogMode("add");
-                }}
+                onClick={() => router.push("/admin/products/new")}
               >
                 <Plus className="size-4" />
                 Thêm sản phẩm
@@ -623,18 +565,14 @@ export default function ProductsTable({
                             <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => {
-                                setActiveProduct(product);
-                                setDialogMode("view");
-                              }}
+                              onClick={() => setViewProduct(product)}
                             >
                               <Eye className="size-4" /> Xem chi tiết
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setActiveProduct(product);
-                                setDialogMode("edit");
-                              }}
+                              onClick={() =>
+                                router.push(`/admin/products/${product.id}/edit`)
+                              }
                             >
                               <Pencil className="size-4" /> Chỉnh sửa
                             </DropdownMenuItem>
@@ -781,83 +719,43 @@ export default function ProductsTable({
         </div>
       </Card>
 
-      {/* Add/Edit Dialog */}
-      <Dialog
-        open={dialogMode === "add" || dialogMode === "edit"}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDialogMode(null);
-            setActiveProduct(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogMode === "edit"
-                ? "Chỉnh sửa sản phẩm"
-                : "Thêm sản phẩm mới"}
-            </DialogTitle>
-            <DialogDescription>
-              {dialogMode === "edit"
-                ? "Cập nhật thông tin sản phẩm"
-                : "Điền thông tin để tạo sản phẩm mới"}
-            </DialogDescription>
-          </DialogHeader>
-          <ProductDialog
-            product={activeProduct ?? undefined}
-            categories={categoryOptions}
-            onSubmit={handleSubmit}
-            onCancel={() => {
-              setDialogMode(null);
-              setActiveProduct(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-
       {/* View Dialog */}
       <Dialog
-        open={dialogMode === "view"}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDialogMode(null);
-            setActiveProduct(null);
-          }
-        }}
+        open={!!viewProduct}
+        onOpenChange={(open) => { if (!open) setViewProduct(null); }}
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Chi tiết sản phẩm</DialogTitle>
           </DialogHeader>
-          {activeProduct && (
+          {viewProduct && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="size-16 rounded-xl bg-muted flex items-center justify-center text-4xl overflow-hidden">
-                  {activeProduct.thumbnail ? (
+                  {viewProduct.thumbnail ? (
                     <img
-                      src={activeProduct.thumbnail}
-                      alt={activeProduct.name}
+                      src={viewProduct.thumbnail}
+                      alt={viewProduct.name}
                       className="size-16 object-cover"
                     />
                   ) : (
                     <span className="text-lg font-semibold">
-                      {activeProduct.name.charAt(0)}
+                      {viewProduct.name.charAt(0)}
                     </span>
                   )}
                 </div>
                 <div>
-                  <h3 className="font-semibold">{activeProduct.name}</h3>
+                  <h3 className="font-semibold">{viewProduct.name}</h3>
                   <p className="text-sm text-muted-foreground font-mono">
-                    {activeProduct.sku ?? activeProduct.id}
+                    {viewProduct.sku ?? viewProduct.id}
                   </p>
                   <ProductStatusBadge
                     status={
-                      activeProduct.status === "archived"
+                      viewProduct.status === "archived"
                         ? "archived"
-                        : (activeProduct.stock ?? 0) === 0
+                        : (viewProduct.stock ?? 0) === 0
                           ? "out_of_stock"
-                          : (activeProduct.status ?? "active")
+                          : (viewProduct.status ?? "active")
                     }
                   />
                 </div>
@@ -866,15 +764,15 @@ export default function ProductsTable({
                 {[
                   [
                     "Danh mục",
-                    activeProduct.categoryName ??
-                      activeProduct.categorySlug ??
+                    viewProduct.categoryName ??
+                      viewProduct.categorySlug ??
                       "Chưa phân loại",
                   ],
-                  ["Giá bán", formatPrice(activeProduct.price)],
-                  ["Tồn kho", `${activeProduct.stock ?? 0} sản phẩm`],
-                  ["Mô tả", activeProduct.description ?? "—"],
-                  ["Ngày tạo", activeProduct.releaseDate ?? "—"],
-                  ["Cập nhật", activeProduct.releaseDate ?? "—"],
+                  ["Giá bán", formatPrice(viewProduct.price)],
+                  ["Tồn kho", `${viewProduct.stock ?? 0} sản phẩm`],
+                  ["Mô tả", viewProduct.description ?? "—"],
+                  ["Ngày tạo", viewProduct.releaseDate ?? "—"],
+                  ["Cập nhật", viewProduct.releaseDate ?? "—"],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4">
                     <span className="text-muted-foreground">{k}</span>
@@ -886,14 +784,17 @@ export default function ProductsTable({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setDialogMode(null);
-                    setActiveProduct(null);
-                  }}
+                  onClick={() => setViewProduct(null)}
                 >
                   Đóng
                 </Button>
-                <Button size="sm" onClick={() => setDialogMode("edit")}>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setViewProduct(null);
+                    router.push(`/admin/products/${viewProduct.id}/edit`);
+                  }}
+                >
                   <Pencil className="size-3.5" /> Chỉnh sửa
                 </Button>
               </div>

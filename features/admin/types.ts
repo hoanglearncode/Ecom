@@ -1,4 +1,3 @@
-import { Catalogue } from "@react-three/fiber";
 import { Category } from "../categories/types";
 import type { MockOrder } from "../orders/types";
 
@@ -103,10 +102,17 @@ export type AdminBrand = {
 };
 
 export type AdminCustomer = {
+  id: string;
   name: string;
   email: string;
   phone: string;
-  status: string;
+  city: string;
+  status: "active" | "inactive" | "blocked";
+  tier: "bronze" | "silver" | "gold" | "platinum";
+  totalOrders: number;
+  totalSpent: number;
+  lastOrderAt?: string;
+  createdAt: string;
 };
 
 export type AdminInventoryItem = {

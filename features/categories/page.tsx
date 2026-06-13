@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
+import type { MockCategory } from "@/lib/api/mock-store/types";
 import {
   Search, ChevronRight, ChevronDown, Grid2x2, List,
   SlidersHorizontal, X, Sparkles, TrendingUp, Flame,
@@ -27,9 +30,37 @@ export interface Category {
   tone: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Adapter ─────────────────────────────────────────────────────────────────
 
-const CATEGORIES: Category[] = [
+function buildCategoryTree(flat: MockCategory[]): Category[] {
+  const childMap = new Map<string, MockCategory[]>();
+  for (const c of flat) {
+    if (c.parentId) {
+      const arr = childMap.get(c.parentId) ?? [];
+      arr.push(c);
+      childMap.set(c.parentId, arr);
+    }
+  }
+  function adapt(mc: MockCategory): Category {
+    const children = (childMap.get(mc.id) ?? []).map(adapt);
+    return {
+      id: mc.id,
+      name: mc.name,
+      slug: mc.slug,
+      items: mc.productCount,
+      status: "active",
+      featured: mc.featured,
+      parentId: mc.parentId ?? null,
+      children: children.length ? children : undefined,
+      description: mc.description,
+      productCount: mc.productCount,
+      tone: mc.tone ?? "default",
+    };
+  }
+  return flat.filter(c => !c.parentId).map(adapt);
+}
+
+const STATIC_CATEGORIES: Category[] = [
   {
     id: "cat-1", name: "Giày dép & Thể thao", slug: "giay-dep", items: 1240,
     status: "active", featured: true, parentId: null, productCount: 1240,
@@ -323,6 +354,15 @@ function CategoryRow({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CategoryPage() {
+  const { data: rawCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => apiGet<MockCategory[]>("/api/categories"),
+  });
+  const CATEGORIES = useMemo(
+    () => rawCategories ? buildCategoryTree(rawCategories) : STATIC_CATEGORIES,
+    [rawCategories]
+  );
+
   const [search, setSearch]       = useState("");
   const [viewMode, setViewMode]   = useState<"grid" | "list">("grid");
   const [expanded, setExpanded]   = useState<Set<string>>(new Set(["cat-1", "cat-2"]));

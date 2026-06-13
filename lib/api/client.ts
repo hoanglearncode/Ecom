@@ -6,20 +6,12 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-import { mockApiResponse } from "./mock-data";
+import { mockApiResponse } from "./mock";
+import { apiConfig, getApiBaseUrl, getApiTimeout, isMockApiEnabled } from "./config";
+import type { ApiResponse, ApiError } from "./types";
 
-export type ApiResponse<T> = {
-  data: T;
-  message?: string;
-  meta?: Record<string, unknown>;
-};
-
-export type ApiErrorBody = {
-  message?: string;
-  error?: string;
-  statusCode?: number;
-  details?: unknown;
-};
+export type { ApiResponse };
+export type ApiErrorBody = ApiError;
 
 export class ApiRequestError extends Error {
   status: number;
@@ -35,9 +27,9 @@ export class ApiRequestError extends Error {
   }
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const isMockApi =  true// process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
-const requestTimeout = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 15000);
+const apiBaseUrl = getApiBaseUrl();
+const isMockApi = isMockApiEnabled();
+const requestTimeout = getApiTimeout();
 
 let inMemoryToken: string | null = null;
 
@@ -65,7 +57,7 @@ function resolveAuthToken() {
   return inMemoryToken ?? readStoredToken();
 }
 
-function normalizeApiError(error: unknown) {
+export function normalizeApiError(error: unknown) {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiErrorBody>;
     const status = axiosError.response?.status ?? 0;
@@ -188,12 +180,7 @@ export async function apiDelete<T>(
   return apiRequest<T>({ ...config, method: "DELETE", url });
 }
 
-export function isMockApiEnabled() {
-  return isMockApi;
-}
-
-export function getApiBaseUrl() {
-  return apiBaseUrl;
-}
+// Re-export from config for convenience
+export { getApiBaseUrl, isMockApiEnabled, isRealApiEnabled, getApiMode, apiConfig, getApiUrl } from "./config";
 
 export default apiClient;

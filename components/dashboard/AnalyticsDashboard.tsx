@@ -37,7 +37,6 @@ import {
   Repeat2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -57,7 +56,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatNumber } from "@/lib/utils/currency";
-import { fetchAnalytics } from "./api";
+import { useAnalytics } from "@/lib/data/queries/use-analytics";
 import type { TimeRange, MetricCard, RecentOrder } from "./types";
 
 // ─── Icon map (avoids dynamic component resolution) ───────────────────────────
@@ -182,11 +181,7 @@ function KpiRow({
 export function AnalyticsDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
 
-  const { data, isFetching, refetch } = useQuery({
-    queryKey: ["analytics", timeRange],
-    queryFn: () => fetchAnalytics(timeRange),
-    staleTime: 60_000,
-  });
+  const { data, isFetching, refetch } = useAnalytics({ range: timeRange });
 
   const handleRefresh = () => refetch();
 
@@ -546,8 +541,9 @@ export function AnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {topProducts.map((product, index) => (
+              {topProducts.map((product : any, index : number) => (
                 <div key={product.name} className="flex items-center gap-3">
+                  {/* Rank badge */}
                   <div
                     className={cn(
                       "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
@@ -558,6 +554,22 @@ export function AnalyticsDashboard() {
                   >
                     {index + 1}
                   </div>
+
+                  {/* Product image */}
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md border bg-muted">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
+                        {product.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {product.name}
