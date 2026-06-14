@@ -86,7 +86,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header cartCount={3} wishlistCount={2} />
+      <Header />
 
       <main className="flex-1 pb-16 sm:pb-0">
         <HeroBanner heroProducts={homeData?.heroProducts ?? []} />

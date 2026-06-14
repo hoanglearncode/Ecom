@@ -2,17 +2,19 @@
 
 import {
   LayoutDashboard, ShoppingBag, Users, Package, Tag,
-  BarChart3, Settings, Bell, Search, ChevronDown,
-  Menu, X, Zap, TrendingUp, Star, MessageSquare,
-  Image, Layers, Globe, Shield, LogOut, ChevronRight,
-  ChevronLeft, PanelLeftClose, PanelLeftOpen, Boxes,
-  Megaphone, Ticket, Truck, RotateCcw, FileText,
-  Palette, Database, Webhook, HelpCircle, ExternalLink,
-  Sun, Moon, SlidersHorizontal, AlertCircle
+  BarChart3, Bell, Search, ChevronDown,
+  Menu, X, Zap, Star, MessageSquare,
+  Layers, Globe, LogOut, ChevronRight,
+  PanelLeftClose, PanelLeftOpen, Boxes,
+  Megaphone, Ticket, FileText,
+  HelpCircle, ExternalLink,
+  Sun, Moon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, createContext, useContext, useEffect, useRef } from 'react'
+import { useUIStore } from '@/lib/stores/ui-store'
+import { useCurrentUser, useAuthStore } from '@/lib/stores/auth-store'
 
 /* ═══════════════════════════════════════════════════════
    CONTEXT
@@ -81,6 +83,8 @@ const ALERTS = [
 function Sidebar() {
   const pathname = usePathname()
   const { collapsed, setCollapsed, setMobileOpen } = useContext(AdminCtx)
+  const user   = useCurrentUser()
+  const logout = useAuthStore((s) => s.logout)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Overview', 'Commerce', 'Customers']))
 
   const toggleGroup = (group: string) => {
@@ -168,16 +172,22 @@ function Sidebar() {
         {/* User */}
         <div className={`flex items-center gap-3 p-3 mx-2 my-2 rounded-xl hover:bg-white/[0.06] cursor-pointer transition-all group ${collapsed ? 'justify-center' : ''}`}>
           <div className="relative shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-[11px] font-black text-primary">A</div>
+            <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center text-[11px] font-black text-primary">
+              {user?.name?.split(' ').slice(-1)[0]?.[0]?.toUpperCase() ?? 'A'}
+            </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#0c0e14]" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-white/80 text-xs font-semibold truncate">Admin User</p>
-              <p className="text-white/30 text-[10px] truncate">admin@shophub.com</p>
+              <p className="text-white/80 text-xs font-semibold truncate">{user?.name ?? 'Admin User'}</p>
+              <p className="text-white/30 text-[10px] truncate">{user?.email ?? 'admin@shophub.com'}</p>
             </div>
           )}
-          {!collapsed && <LogOut size={14} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0" />}
+          {!collapsed && (
+            <button onClick={logout} title="Đăng xuất">
+              <LogOut size={14} className="text-white/20 group-hover:text-white/50 transition-colors shrink-0" />
+            </button>
+          )}
         </div>
 
         {/* Collapse toggle */}
@@ -201,7 +211,8 @@ function Topbar() {
   const { setMobileOpen } = useContext(AdminCtx)
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
+  const { theme, setTheme } = useUIStore()
+  const isDark = theme === 'dark'
   const notifRef = useRef<HTMLDivElement>(null)
   const unread = ALERTS.filter(a => !a.read).length
 
@@ -254,8 +265,12 @@ function Topbar() {
         )}
 
         {/* Dark mode */}
-        <button onClick={() => setDarkMode(v => !v)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl transition-all">
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        <button
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+          className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl transition-all"
+          title={isDark ? 'Chế độ sáng' : 'Chế độ tối'}
+        >
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {/* Notifications */}
@@ -310,8 +325,15 @@ function Topbar() {
 ═══════════════════════════════════════════════════════ */
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { sidebarCollapsed: collapsed, setSidebarCollapsed: setCollapsed, theme } = useUIStore()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Apply dark mode class to <html>
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'dark') root.classList.add('dark')
+    else root.classList.remove('dark')
+  }, [theme])
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
