@@ -5,6 +5,7 @@ export type Product = {
   price: number;
   currency?: string;
   thumbnail?: string;
+  images?: string[];
   description?: string;
   brand?: string;
   categoryId?: string;

@@ -59,9 +59,9 @@ interface RelatedProduct {
   brand: string;
 }
 
-// ─── Mock Product ─────────────────────────────────────────────────────────────
+// ─── Mock Product (default / fallback) ───────────────────────────────────────
 
-const PRODUCT = {
+const PRODUCT_DEFAULT = {
   id: "P001",
   name: "Biti's Hunter X Street 2026 – Phiên Bản Hè",
   brand: "Biti's Hunter",
@@ -200,6 +200,57 @@ const AVATAR_COLORS: Record<string,string> = {
 function fmtPrice(n:number){ return new Intl.NumberFormat("vi-VN").format(n)+"₫"; }
 function fmtNum(n:number){ return n>=1000?(n/1000).toFixed(0)+"K":String(n); }
 function discPct(o:number,s:number){ return Math.round(((o-s)/o)*100); }
+function isUrl(s:string){ return s.startsWith("http")||s.startsWith("/"); }
+
+function buildSpecs(p: APIProduct): ProductSpec[] {
+  const specs: ProductSpec[] = [];
+  if (p.brand)        specs.push({ label: "Thương hiệu",  value: p.brand });
+  if (p.categoryName) specs.push({ label: "Danh mục",     value: p.categoryName });
+  if (p.color)        specs.push({ label: "Màu sắc",      value: p.color });
+  if (p.material)     specs.push({ label: "Chất liệu",    value: p.material });
+  if (p.warranty)     specs.push({ label: "Bảo hành",     value: p.warranty });
+  if (p.weight)       specs.push({ label: "Trọng lượng",  value: p.weight });
+  if (p.dimensions)   specs.push({ label: "Kích thước",   value: p.dimensions });
+  if (p.releaseDate)  specs.push({ label: "Ngày ra mắt",  value: p.releaseDate });
+  if (p.sku)          specs.push({ label: "SKU",           value: p.sku });
+  if (p.tags?.length) specs.push({ label: "Tags",          value: p.tags.join(", ") });
+  return specs.length > 0 ? specs : PRODUCT_DEFAULT.specs;
+}
+
+function adaptProduct(p: APIProduct): typeof PRODUCT_DEFAULT {
+  const imgs = [
+    ...(p.thumbnail ? [p.thumbnail] : []),
+    ...(p.images ?? []),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  return {
+    ...PRODUCT_DEFAULT,
+    id: p.id,
+    name: p.name,
+    brand: p.brand ?? PRODUCT_DEFAULT.brand,
+    brandEmoji: "🏷️",
+    sku: p.sku ?? PRODUCT_DEFAULT.sku,
+    price: p.price,
+    originalPrice: p.compareAtPrice ?? p.price,
+    category: p.categoryName ?? p.categorySlug ?? PRODUCT_DEFAULT.category,
+    categorySlug: p.categorySlug ?? PRODUCT_DEFAULT.categorySlug,
+    rating: p.rating ?? PRODUCT_DEFAULT.rating,
+    reviewCount: p.reviewCount ?? PRODUCT_DEFAULT.reviewCount,
+    soldCount: Math.max(Math.floor((p.reviewCount ?? 0) * 3), 100),
+    viewCount: Math.max(Math.floor((p.reviewCount ?? 0) * 12), 500),
+    isHot: (p.rating ?? 0) >= 4.7,
+    warranty: p.warranty ?? PRODUCT_DEFAULT.warranty,
+    material: p.material ?? PRODUCT_DEFAULT.material,
+    description: p.description ?? PRODUCT_DEFAULT.description,
+    images: imgs.length > 0 ? imgs : PRODUCT_DEFAULT.images,
+    specs: buildSpecs(p),
+    storeInfo: {
+      ...PRODUCT_DEFAULT.storeInfo,
+      name: p.brand ? `${p.brand} Official` : PRODUCT_DEFAULT.storeInfo.name,
+      avatar: p.brand ? p.brand.slice(0, 2).toUpperCase() : PRODUCT_DEFAULT.storeInfo.avatar,
+    },
+  };
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -233,7 +284,7 @@ function Countdown({mins}:{mins:number}){
 
 export default function ProductDetailPage() {
   const [activeImage,    setActiveImage]   = useState(0);
-  const [selectedColor,  setSelectedColor] = useState(PRODUCT.colorVariants[0].id);
+  const [selectedColor,  setSelectedColor] = useState(PRODUCT_DEFAULT.colorVariants[0].id);
   const [selectedSize,   setSelectedSize]  = useState<string | null>(null);
   const [qty,            setQty]           = useState(1);
   const [liked,          setLiked]         = useState(false);
@@ -244,12 +295,32 @@ export default function ProductDetailPage() {
   const [addedToCart,    setAddedToCart]   = useState(false);
   const [toast,          setToast]         = useState<string|null>(null);
 
+  const params = useParams();
+  const productId = params.slug as string;
+
+  const { data: rawProduct, isLoading } = useQuery({
+    queryKey: ["product", productId],
+    queryFn:  () => getProduct(productId),
+    enabled:  !!productId,
+  });
+
+  const PRODUCT = useMemo(
+    () => (rawProduct ? adaptProduct(rawProduct) : PRODUCT_DEFAULT),
+    [rawProduct],
+  );
+
   const disc = discPct(PRODUCT.originalPrice, PRODUCT.price);
   const plt  = PLATFORM_CFG[PRODUCT.platform];
   const colorVar = PRODUCT.colorVariants.find(v=>v.id===selectedColor)!;
   const finalPrice = PRODUCT.price + (colorVar?.priceAdjust ?? 0);
   const sizeVar = PRODUCT.sizeVariants.find(v=>v.id===selectedSize);
   const canAddCart = selectedSize !== null && (sizeVar?.stock ?? 0) > 0;
+
+  if (isLoading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-[14px] text-gray-400">Đang tải sản phẩm...</div>
+    </div>
+  );
 
   function showToast(msg:string){ setToast(msg); setTimeout(()=>setToast(null),2500); }
 
@@ -324,7 +395,10 @@ export default function ProductDetailPage() {
           <div className="space-y-3">
             {/* Main image */}
             <div className="relative bg-white rounded-2xl border border-gray-100 h-80 flex items-center justify-center text-[80px] overflow-hidden">
-              {PRODUCT.images[activeImage]}
+              {isUrl(PRODUCT.images[activeImage] ?? "")
+                ? <img src={PRODUCT.images[activeImage]} alt={PRODUCT.name} className="w-full h-full object-contain" />
+                : PRODUCT.images[activeImage]
+              }
               {/* Badges */}
               <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                 {disc>0&&<span className="text-[11px] bg-red-500 text-white px-2 py-1 rounded-lg font-bold">-{disc}%</span>}
@@ -347,9 +421,12 @@ export default function ProductDetailPage() {
             <div className="flex gap-2">
               {PRODUCT.images.map((img,i)=>(
                 <button key={i} onClick={()=>setActiveImage(i)}
-                  className={cn("w-14 h-14 rounded-xl border flex items-center justify-center text-2xl transition-all",
+                  className={cn("w-14 h-14 rounded-xl border flex items-center justify-center text-2xl transition-all overflow-hidden",
                     activeImage===i?"border-[#1a1a2e] bg-[#1a1a2e]/5":"border-gray-100 bg-white hover:border-gray-200")}>
-                  {img}
+                  {isUrl(img)
+                    ? <img src={img} alt="" className="w-full h-full object-cover" />
+                    : img
+                  }
                 </button>
               ))}
             </div>
